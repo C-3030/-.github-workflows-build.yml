@@ -272,7 +272,6 @@ object ThemeUtil {
         }
     }
 
-    fun isDarkMode(context: Context) =
     const val ACCENT_KEY = "accent_int"
     const val ACCENT_DEFAULT = -49024 // 0xFFFF4080 玫红
 
@@ -294,6 +293,7 @@ object ThemeUtil {
             .show()
     }
 
+    fun isDarkMode(context: Context) =
         ((context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
                 == Configuration.UI_MODE_NIGHT_YES)
 }
