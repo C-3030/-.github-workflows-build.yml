@@ -302,6 +302,18 @@ class MainActivity : RinkActivity(), NavigationView.OnNavigationItemSelectedList
         binding.navView.setNavigationItemSelectedListener(this)
         //initView()
         binding.tablayout.setupWithViewPager(binding.contentView)
+        // 强调色：选中标签文字与指示条使用第二个颜色
+        val accent = ThemeUtil.accentColor()
+        val unselectedTab = try {
+            com.google.android.material.color.MaterialColors.getColor(
+                binding.tablayout,
+                com.google.android.material.R.attr.colorOnSurfaceVariant
+            )
+        } catch (e: Exception) {
+            ThemeUtil.getTextColorPrimary(this)
+        }
+        binding.tablayout.setSelectedTabIndicatorColor(accent)
+        binding.tablayout.setTabTextColors(unselectedTab, accent)
         // 首页模式:插画 / 小说,由抽屉切换、经 recreate() 重新装配
         val novelMode = PxEZApp.instance.pre.getString("main_mode", "illust") == "novel"
         binding.navView.menu.findItem(R.id.nav_novel_mode)?.setTitle(
