@@ -352,10 +352,10 @@ class UserMActivity : RinkActivity() {
     }
 
     private fun batchDownload() {
-        val options = listOf("全部插画", "全部漫画", "公开收藏", "私密收藏")
-        MaterialDialogs(this).show {
-            title("批量下载")
-            listItems(options) { _, index, _ ->
+        val options = arrayOf("全部插画", "全部漫画", "公开收藏", "私密收藏")
+        MaterialDialogs(this)
+            .setTitle("批量下载")
+            .setItems(options) { _, index ->
                 lifecycleScope.launch {
                     try {
                         Toasty.info(this@UserMActivity, "正在获取作品列表…")
@@ -376,7 +376,7 @@ class UserMActivity : RinkActivity() {
                     }
                 }
             }
-            negativeButton(android.R.string.cancel)
-        }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 }
