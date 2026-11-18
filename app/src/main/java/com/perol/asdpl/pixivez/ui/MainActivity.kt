@@ -346,8 +346,9 @@ class MainActivity : RinkActivity(), NavigationView.OnNavigationItemSelectedList
         binding.contentView.offscreenPageLimit =
             if (PxEZApp.instance.pre.getBoolean("refreshTab", false)) 0 else 3
 
-        val position = PxEZApp.instance.pre.getString("firstpage", "0")?.toInt() ?: 0
-        binding.tablayout.selectTab(binding.tablayout.getTabAt(position)!!)
+        val position = (PxEZApp.instance.pre.getString("firstpage", "0")?.toInt() ?: 0)
+            .coerceIn(0, (binding.tablayout.tabCount - 1).coerceAtLeast(0))
+        binding.tablayout.getTabAt(position)?.let { binding.tablayout.selectTab(it) }
         binding.tablayout.addOnTabSelectedListener(object :
             TabLayout.OnTabSelectedListener {
             override fun onTabReselected(tab: TabLayout.Tab?) {
