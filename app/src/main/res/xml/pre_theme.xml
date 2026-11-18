@@ -13,6 +13,10 @@
             app:key="theme"
             app:summary="TODO"
             app:title="@string/title_theme_color" />
+        <Preference
+            app:key="accentColor"
+            app:summary="选中标签的第二个颜色"
+            app:title="强调色（第二颜色）" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Material">
