@@ -377,4 +377,5 @@
     <string name="switch_to_illust">切换到插画模式</string>
     <string name="novel_body_load_failed">正文加载失败，请重试</string>
     <string name="novel_retry">重试</string>
+    <string name="nav_bar_edit">导航栏</string>
 </resources>
