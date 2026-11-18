@@ -25,6 +25,7 @@
 
 package com.perol.asdpl.pixivez.ui.user
 
+import androidx.lifecycle.lifecycleScope
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
