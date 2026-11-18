@@ -58,6 +58,7 @@ import com.perol.asdpl.pixivez.objects.ThemeUtil
 import com.perol.asdpl.pixivez.objects.Toasty
 import com.perol.asdpl.pixivez.objects.UpToTopListener
 import com.perol.asdpl.pixivez.objects.UserCacheRepo
+import com.perol.asdpl.pixivez.services.BatchDownloader
 import com.perol.asdpl.pixivez.services.PxEZApp
 import com.perol.asdpl.pixivez.ui.settings.BlockViewModel
 import com.perol.asdpl.pixivez.view.AppBarStateChangeListener
@@ -321,6 +322,7 @@ class UserMActivity : RinkActivity() {
             android.R.id.home -> finishAfterTransition()
             R.id.action_block_user -> block()
             R.id.action_share -> share()
+            R.id.action_batch_download -> batchDownload()
         }
         return super.onOptionsItemSelected(item)
     }
@@ -347,5 +349,34 @@ class UserMActivity : RinkActivity() {
         textIntent.type = "text/plain"
         textIntent.putExtra(Intent.EXTRA_TEXT, "https://www.pixiv.net/member.php?id=$id")
         startActivity(Intent.createChooser(textIntent, getString(R.string.share)))
+    }
+
+    private fun batchDownload() {
+        val options = listOf("全部插画", "全部漫画", "公开收藏", "私密收藏")
+        MaterialDialogs(this).show {
+            title("批量下载")
+            listItems(options) { _, index, _ ->
+                lifecycleScope.launch {
+                    try {
+                        Toasty.info(this@UserMActivity, "正在获取作品列表…")
+                        val list = when (index) {
+                            0 -> BatchDownloader.fetchUserWorks(id, "illust")
+                            1 -> BatchDownloader.fetchUserWorks(id, "manga")
+                            2 -> BatchDownloader.fetchUserBookmarks(id, "public")
+                            else -> BatchDownloader.fetchUserBookmarks(id, "private")
+                        }
+                        if (list.isEmpty()) {
+                            Toasty.warning(this@UserMActivity, "没有可下载的作品")
+                        } else {
+                            BatchDownloader.download(list)
+                            Toasty.success(this@UserMActivity, "已加入下载队列：" + list.size + " 个作品")
+                        }
+                    } catch (e: Exception) {
+                        Toasty.error(this@UserMActivity, "获取失败：" + (e.message ?: ""))
+                    }
+                }
+            }
+            negativeButton(android.R.string.cancel)
+        }
     }
 }
