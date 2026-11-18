@@ -6,10 +6,10 @@ import com.perol.asdpl.pixivez.services.PxEZApp
 /** 底部导航可选的页面 */
 enum class NavPage(val key: String, val title: String, val iconRes: Int) {
     Home("home", "首页", R.drawable.ic_action_home),
-    Bookmark("bookmark", "收藏", R.drawable.ic_star),
+    Bookmark("bookmark", "收藏", R.drawable.ic_heart_outline),
     Search("search", "搜索", R.drawable.ic_action_search),
-    Follow("follow", "关注", R.drawable.ic_action_user),
-    Rank("rank", "排行", R.drawable.ic_action_rank);
+    Follow("follow", "关注", R.drawable.ic_star_outline),
+    Rank("rank", "排行", R.drawable.ic_star);
 
     companion object {
         fun byKey(key: String?): NavPage? = entries.firstOrNull { it.key == key }
