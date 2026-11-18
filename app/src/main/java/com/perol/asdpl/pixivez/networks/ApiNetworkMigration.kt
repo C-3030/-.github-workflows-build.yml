@@ -8,9 +8,11 @@ internal fun migrateLegacyApiNetwork(preferences: SharedPreferences) {
     // Historical development builds used this key; retain it to avoid re-migrating user choices.
     val marker = "apiEchMigration226"
     if (preferences.getBoolean(marker, false)) return
-    val migrate = shouldMigrateLegacyApiNetwork(
+    val savedSni = preferences.getString(SniMode.PREF_KEY, null)
+    // 全新安装(无任何已保存值)不应被迁移逻辑强改成 ECH，否则新装的 App 会连不上
+    val migrate = savedSni != null && shouldMigrateLegacyApiNetwork(
         preferences.getString(DnsMode.PREF_KEY, null),
-        preferences.getString(SniMode.PREF_KEY, null),
+        savedSni,
         preferences.getString(PixivDirectDns.PREF_KEY, null),
         preferences.getString(SniReplaceConfig.PREF_KEY, null),
     )
