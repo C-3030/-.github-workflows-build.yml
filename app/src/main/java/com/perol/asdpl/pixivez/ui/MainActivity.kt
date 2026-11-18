@@ -55,6 +55,7 @@ import com.perol.asdpl.pixivez.base.MaterialDialogs
 import com.perol.asdpl.pixivez.base.RinkActivity
 import com.perol.asdpl.pixivez.base.getInputField
 import com.perol.asdpl.pixivez.base.setInput
+import com.perol.asdpl.pixivez.core.NavConfig
 import com.perol.asdpl.pixivez.core.TAG_TYPE
 import com.perol.asdpl.pixivez.data.AppDataRepo
 import com.perol.asdpl.pixivez.data.entity.UserEntity
@@ -71,6 +72,7 @@ import com.perol.asdpl.pixivez.services.AppUpdater
 import com.perol.asdpl.pixivez.services.PxEZApp
 import com.perol.asdpl.pixivez.ui.account.LoginActivity
 import com.perol.asdpl.pixivez.ui.home.HelloMainViewPager
+import com.perol.asdpl.pixivez.ui.home.MainNavPager
 import com.perol.asdpl.pixivez.ui.manager.DownloadManagerActivity
 import com.perol.asdpl.pixivez.ui.novel.NovelMainViewPager
 import com.perol.asdpl.pixivez.ui.manager.ImgManagerActivity
@@ -339,7 +341,7 @@ class MainActivity : RinkActivity(), NavigationView.OnNavigationItemSelectedList
         )
         binding.contentView.adapter =
             if (novelMode) NovelMainViewPager(supportFragmentManager)
-            else HelloMainViewPager(supportFragmentManager)
+            else MainNavPager(supportFragmentManager, NavConfig.visiblePages())
 
         binding.contentView.offscreenPageLimit =
             if (PxEZApp.instance.pre.getBoolean("refreshTab", false)) 0 else 3
