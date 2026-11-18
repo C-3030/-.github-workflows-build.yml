@@ -184,6 +184,10 @@ class MainActivity : RinkActivity(), NavigationView.OnNavigationItemSelectedList
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         // Handle navigation view item clicks here.
         when (item.itemId) {
+            R.id.nav_multi_download -> {
+                FragmentActivity.start(this, TAG_TYPE.Collect.name)
+            }
+
             R.id.nav_edit_nav -> {
                 startActivity(Intent(this, NavEditActivity::class.java))
             }
