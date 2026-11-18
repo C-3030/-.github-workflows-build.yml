@@ -181,6 +181,24 @@ class MainActivity : RinkActivity(), NavigationView.OnNavigationItemSelectedList
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         // Handle navigation view item clicks here.
         when (item.itemId) {
+            R.id.nav_following -> {
+                if (!AppDataRepo.userInited()) return true
+                val args = Bundle().apply {
+                    putString("TAG", "Following")
+                    putInt("userid", AppDataRepo.currentUser.userid)
+                }
+                FragmentActivity.start(this, "UserList", "关注用户", args)
+            }
+
+            R.id.nav_follower -> {
+                if (!AppDataRepo.userInited()) return true
+                val args = Bundle().apply {
+                    putString("TAG", "Follower")
+                    putInt("userid", AppDataRepo.currentUser.userid)
+                }
+                FragmentActivity.start(this, "UserList", "我的粉丝", args)
+            }
+
             R.id.nav_gallery -> {
                 FragmentActivity.start(this, TAG_TYPE.WalkThrough.name)
             }
