@@ -63,6 +63,7 @@ import com.perol.asdpl.pixivez.databinding.NavHeaderMainBinding
 import com.perol.asdpl.pixivez.objects.LARGE_SCREEN_WIDTH_SIZE
 import com.perol.asdpl.pixivez.objects.MEDIUM_SCREEN_WIDTH_SIZE
 import com.perol.asdpl.pixivez.objects.Toasty
+import com.perol.asdpl.pixivez.objects.ThemeUtil
 import com.perol.asdpl.pixivez.objects.UpToTopFragment
 import com.perol.asdpl.pixivez.objects.dp
 import com.perol.asdpl.pixivez.objects.screenWidthDp
