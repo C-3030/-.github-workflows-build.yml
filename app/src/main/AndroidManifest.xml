@@ -103,6 +103,7 @@
             android:name=".ui.manager.ImgManagerActivity"
             android:exported="true" />
         <activity android:name=".ui.WebViewActivity" />
+        <activity android:name=".ui.settings.NavEditActivity" />
         <activity
             android:name=".ui.settings.SettingsActivity"
             android:label="@string/title_activity_setting"
