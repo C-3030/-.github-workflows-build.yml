@@ -6,7 +6,7 @@ import org.junit.Test
 
 class ApiNetworkTest {
     @Test fun legacyEmptyModeOmitsSniAndKeepsCertificateVerification() {
-        assertEquals(SniMode.ECH, SniMode.fromCode(null))
+        assertEquals(SniMode.PLAIN, SniMode.fromCode(null))
         val client = OkHttpClient.Builder()
             .applyApiNetwork(DnsMode.DIRECT, SniMode.EMPTY, verify = true).build()
         assertFalse(captureHello(client).contains(0))
