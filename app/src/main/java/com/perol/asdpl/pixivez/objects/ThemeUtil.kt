@@ -273,6 +273,27 @@ object ThemeUtil {
     }
 
     fun isDarkMode(context: Context) =
+    const val ACCENT_KEY = "accent_int"
+    const val ACCENT_DEFAULT = -56448 // 0xFFFF4080
+
+    /** 第二个颜色：用于选中标签、指示条等强调位置 */
+    @JvmStatic
+    fun accentColor(): Int = PxEZApp.instance.pre.getInt(ACCENT_KEY, ACCENT_DEFAULT)
+
+    @SuppressLint("CheckResult")
+    fun showAccentColorDialog(fragment: androidx.fragment.app.Fragment, pref: Preference) {
+        val current = accentColor()
+        ColorPickerDialog.Builder(fragment.requireContext())
+            .setColorShape(ColorShape.SQAURE)
+            .setDefaultColor(current)
+            .setColorListener { color, colorHex ->
+                pref.summary = colorHex
+                PxEZApp.instance.pre.edit { putInt(ACCENT_KEY, color) }
+                PxEZApp.ActivityCollector.recreate()
+            }
+            .show()
+    }
+
         ((context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
                 == Configuration.UI_MODE_NIGHT_YES)
 }
