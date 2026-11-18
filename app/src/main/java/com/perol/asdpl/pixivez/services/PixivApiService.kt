@@ -236,6 +236,10 @@ interface PixivApiService { //TODO: check filter=for_android
         @Query("type") type: String, //illust manga novel
     ): UserIllustNext
 
+    /** 按 next_url 继续拉取下一页 */
+    @GET
+    suspend fun getNextUserIllusts(@Url url: String): UserIllustNext
+
     @GET("/v1/user/related") //?filter=for_android
     suspend fun getUserRelated(
         @Query("seed_user_id") seedUserId: Int,
