@@ -80,6 +80,7 @@ import com.perol.asdpl.pixivez.ui.pic.PictureActivity
 import com.perol.asdpl.pixivez.ui.search.SearchActivity
 import com.perol.asdpl.pixivez.ui.search.SearchRouter
 import com.perol.asdpl.pixivez.ui.settings.SaucenaoActivity
+import com.perol.asdpl.pixivez.ui.settings.NavEditActivity
 import com.perol.asdpl.pixivez.ui.settings.SettingsActivity
 import com.perol.asdpl.pixivez.ui.user.UserMActivity
 import kotlinx.coroutines.CoroutineScope
@@ -183,6 +184,10 @@ class MainActivity : RinkActivity(), NavigationView.OnNavigationItemSelectedList
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         // Handle navigation view item clicks here.
         when (item.itemId) {
+            R.id.nav_edit_nav -> {
+                startActivity(Intent(this, NavEditActivity::class.java))
+            }
+
             R.id.nav_following -> {
                 if (!AppDataRepo.userInited()) return true
                 val args = Bundle().apply {
