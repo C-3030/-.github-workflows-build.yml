@@ -389,14 +389,19 @@ class MainActivity : RinkActivity(), NavigationView.OnNavigationItemSelectedList
             NavHeaderMainBinding.bind(binding.navView.getHeaderView(0)),
             AppDataRepo.currentUser
         )
-        // reset icon after setupWithViewPager 清空所有tab
-        for (i in 0..2) {
-            val tabItem = binding.tablayout.getTabAt(i)!!
-            tabItem.icon = when (i) {
-                0 -> ContextCompat.getDrawable(this, R.drawable.ic_action_home)
-                1 -> ContextCompat.getDrawable(this, R.drawable.ic_action_rank)
-                else -> ContextCompat.getDrawable(this, R.drawable.ic_action_user)
+        // 按配置渲染底部导航：图标 + 白色描边文字
+        val navPages = NavConfig.visiblePages()
+        for (i in navPages.indices) {
+            val tab = binding.tablayout.getTabAt(i) ?: continue
+            tab.icon = ContextCompat.getDrawable(this, navPages[i].iconRes)
+            val label = android.widget.TextView(this).apply {
+                text = navPages[i].title
+                setTextColor(android.graphics.Color.WHITE)
+                textSize = 11f
+                gravity = android.view.Gravity.CENTER
+                setShadowLayer(2.5f, 0f, 0f, android.graphics.Color.BLACK)
             }
+            tab.setCustomView(label)
         }
     }
 
