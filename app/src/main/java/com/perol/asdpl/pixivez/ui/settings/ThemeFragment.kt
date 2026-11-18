@@ -72,6 +72,13 @@ class ThemeFragment : PreferenceFragmentCompat() {
                 true
             }
         }
+        findPreference<Preference>("accentColor")?.apply {
+            summary = String.format("#%06X", 0xFFFFFF and ThemeUtil.accentColor())
+            setOnPreferenceClickListener {
+                ThemeUtil.showAccentColorDialog(this@ThemeFragment, it)
+                true
+            }
+        }
         colorThemeConfig()
 
         findPreference<SwitchPreferenceCompat>("bottomAppbar")!!.setOnPreferenceChangeListener { preference, newValue ->
