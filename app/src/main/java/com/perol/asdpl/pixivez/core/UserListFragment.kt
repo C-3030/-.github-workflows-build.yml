@@ -213,12 +213,16 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
             }
         }
         viewModel.dataAdded.observe(viewLifecycleOwner) {
+            autoLoading = false
             if (it != null) {
                 fullData.addAll(it)
                 val extra = visible(it)
                 if (extra.isNotEmpty()) userListAdapter.addData(extra)
                 if (groupEnabled) renderGroupChips()
+                // 拉完一页可能还是不够一屏,继续自动拉
+                maybeAutoLoad()
             } else {
+                autoLoading = false
                 userListAdapter.loadMoreFail()
             }
         }
@@ -261,9 +265,22 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
         }
     }
 
+    private var autoLoading = false
+
     private fun applyFilter() {
         userListAdapter.setList(visible(fullData))
         if (groupEnabled) renderGroupChips()
+        maybeAutoLoad()
+    }
+
+    // 按模式过滤后第一屏可能很空(比如"小说"模式里只有个别人有小说),
+    // 列表填不满屏幕时自动多拉一页,避免出现大片空白。
+    private fun maybeAutoLoad() {
+        if (autoLoading) return
+        if (userListAdapter.data.size >= 8) return
+        if (viewModel.nextUrl.value.isNullOrBlank()) return
+        autoLoading = true
+        viewModel.onLoadMore()
     }
 
     /** 顶部分组 chip:全部 / 未分组 / 各分组(带人数) */

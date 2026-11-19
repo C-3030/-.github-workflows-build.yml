@@ -34,17 +34,14 @@ object SearchFilterStore {
 
     fun isEmpty(): Boolean = includeTags().isEmpty() && excludeTags().isEmpty()
 
-    /** 把包含标签拼到搜索词后面;pixiv 用空格分隔多个词做 AND 搜索。
-     *  中文别名(如"虐杀")会换成组内真正的标签(「リョナ」)再搜。 */
-    fun applyIncludes(word: String): String {
-        val includes = includeTags().map { TagAliases.searchTag(it) }.distinct()
-        if (includes.isEmpty()) return word
-        return (listOf(word.trim()) + includes).filter { it.isNotEmpty() }.joinToString(" ")
-    }
+    /** 包含标签不做服务端拼接(否则"萝莉"会被换成「ロリ」,而 pixiv 的长标签
+     *  "萝莉/妹妹/..." 只认中文子段,拼进去反而把它排掉)。
+     *  这里只回原词,真正的包含过滤在 isIncluded() 里按 / 拆分子标签本地做。 */
+    fun applyIncludes(word: String): String = word
 
-    /** 长标签常用 "/" 拼接多个子标签,拆开后再比对 */
+    /** 长标签常用 "/" 拼接多个子标签;vis() 还会带 "|" 分隔的译名,一起拆 */
     fun tagParts(tagName: String): List<String> =
-        tagName.split('/', '／', ',').map { it.trim() }.filter { it.isNotEmpty() }
+        tagName.split('/', '／', ',', '|').map { it.trim() }.filter { it.isNotEmpty() }
 
     private fun matches(entry: String, tagName: String): Boolean {
         val parts = tagParts(tagName)

@@ -68,6 +68,11 @@ class DownloadManagerActivity : RinkActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
         entryAdapter = DownloadEntryAdapter()
+        entryAdapter.onToggle = { entry ->
+            val model = entry.model ?: return@onToggle
+            if (model.status == Status.PAUSED) ketch.resume(model.id)
+            else ketch.pause(model.id)
+        }
         binding.progressList.apply {
             adapter = entryAdapter
             layoutManager = LinearLayoutManager(context)
@@ -150,17 +155,10 @@ class DownloadManagerActivity : RinkActivity() {
     private fun render() {
         val store = File(PxEZApp.storepath)
         val entries = buildEntries(store, currentTab == 1)
+            .sortedBy { it.isDone }  // 没下完的排前面
         entryAdapter.setNewInstance(entries.toMutableList())
-        // 前面的 n = 这次完成的,n = 这次队列总量;都完了就 0/0
-        if (doneThisSession == 0 && pendingAtOpen == 0) {
-            binding.progress.text = getString(R.string.fractional, 0, 0)
-        } else {
-            binding.progress.text = getString(
-                R.string.fractional,
-                doneThisSession,
-                doneThisSession + pendingAtOpen
-            )
-        }
+        // 前面的 n = 本次完成数量;后面的 n = 进入页面时这一批队列总量
+        binding.progress.text = getString(R.string.fractional, doneThisSession, pendingAtOpen)
     }
 
     /** 建当前栏目的行:插画=ketch 任务 + 目录里扫到的图片;小说=导出记录 + Novel 目录 */
@@ -202,14 +200,17 @@ class DownloadManagerActivity : RinkActivity() {
             DownloadFiles.list(imageDir)
                 .filter { DownloadFiles.isImage(it) && it.name !in taskFiles }
                 .forEach { file ->
+                    val pid = file.nameWithoutExtension.substringBefore("(")
+                        .toIntOrNull()
                     result.add(
                         DownloadEntry(
                             key = "file-${file.absolutePath}",
-                            title = file.name,
+                            title = file.nameWithoutExtension,
                             subtitle = "${file.length() / 1024}KB · ${dateText(file)}",
                             progress = 100,
                             isNovel = false,
-                            file = file
+                            file = file,
+                            illustId = pid
                         )
                     )
                 }
@@ -233,14 +234,17 @@ class DownloadManagerActivity : RinkActivity() {
             DownloadFiles.list(File(store, "Novel"))
                 .filter { DownloadFiles.isNovel(it) && it.absolutePath !in recordPaths }
                 .forEach { file ->
+                    val nid = file.nameWithoutExtension.substringAfterLast('_')
+                        .toIntOrNull()
                     result.add(
                         DownloadEntry(
                             key = "novel-file-${file.absolutePath}",
-                            title = file.nameWithoutExtension,
+                            title = file.nameWithoutExtension.substringBeforeLast('_'),
                             subtitle = "${file.extension} · ${file.length() / 1024}KB",
                             progress = 100,
                             isNovel = true,
-                            file = file
+                            file = file,
+                            novelId = nid
                         )
                     )
                 }
@@ -267,7 +271,8 @@ class DownloadManagerActivity : RinkActivity() {
                 entry.novelId?.let { com.perol.asdpl.pixivez.ui.novel.NovelActivity.start(this, it) }
             }
         }
-        if (entry.file != null) {
+        // 只有下完的文件才能"打开文件",进行中的不显示这个选项
+        if (entry.file != null && entry.isDone) {
             labels.add(getString(R.string.open_file))
             actions.add { entry.file?.let { FileOpenUtil.open(this, it) } }
         }

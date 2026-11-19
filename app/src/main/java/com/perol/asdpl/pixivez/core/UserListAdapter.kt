@@ -29,6 +29,7 @@ import android.app.Activity
 import android.app.ActivityOptions
 import android.util.Pair
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.lifecycle.LifecycleOwner
@@ -160,6 +161,19 @@ class UserListAdapter(layoutResId: Int) :
             holder.itemView.layoutParams.apply { width = 0; height = 0 }
             return
         }
+        holder.itemView.visibility = View.VISIBLE
+        holder.itemView.layoutParams.apply {
+            width = ViewGroup.LayoutParams.MATCH_PARENT
+            height = ViewGroup.LayoutParams.WRAP_CONTENT
+        }
+        // 先绑头像和名字,再决定下面展示什么作品条(以前有分支提前 return,漏了绑定)
+        val userImage = holder.getView<NiceImageView>(R.id.imageview_usershow)
+        userImage.setBorderColor(if (item.user.is_followed) badgeTextColor else colorPrimary)
+        holder.getView<TextView>(R.id.textview_usershowname).text =
+            "${item.user.name} : ${item.user.account}"
+        Glide.with(userImage.context).load(item.user.profile_image_urls.medium)
+            .circleCrop().transition(withCrossFade())
+            .into(userImage)
         // 多选:选中的卡片描一圈强调色,未选中恢复原样
         val selected = selectionEnabled && item.user.id in selectedIds
         val strokePx = (3 * holder.itemView.resources.displayMetrics.density).toInt()
@@ -172,13 +186,8 @@ class UserListAdapter(layoutResId: Int) :
         val showNovel = !showIllust &&
             stripMode != StripMode.ILLUST && item.novels.isNotEmpty()
         if (!showIllust && !showNovel) {
-            // 什么都没有(或当前模式没有对应作品):收成"头像 + 名字"的小卡片
+            // 什么都没有(或当前模式没有对应作品):只显示头像 + 名字,不显示作品条
             recyclerview.visibility = View.GONE
-            holder.getViewOrNull<View>(R.id.cardview)?.let {
-                it.layoutParams = it.layoutParams.apply {
-                    height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-                }
-            }
             return
         }
         if (showNovel) {
@@ -239,13 +248,6 @@ class UserListAdapter(layoutResId: Int) :
                 )
             }
         }
-        val userImage = holder.getView<NiceImageView>(R.id.imageview_usershow)
-        userImage.setBorderColor(if (item.user.is_followed) badgeTextColor else colorPrimary)
-        val username = holder.getView<TextView>(R.id.textview_usershowname)
-        username.text = "${item.user.name} : ${item.user.account}"
-        Glide.with(userImage.context).load(item.user.profile_image_urls.medium)
-            .circleCrop().transition(withCrossFade())
-            .into(userImage)
     }
 
     private fun addUserBinder(rootView: View, user: User) {

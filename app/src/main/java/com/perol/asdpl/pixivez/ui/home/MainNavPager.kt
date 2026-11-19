@@ -10,7 +10,6 @@ import com.perol.asdpl.pixivez.data.AppDataRepo
 import com.perol.asdpl.pixivez.ui.home.my.HelloMThFragment
 import com.perol.asdpl.pixivez.ui.home.recom.HelloMRecomFragment
 import com.perol.asdpl.pixivez.ui.home.trend.HelloTrendingFragment
-import com.perol.asdpl.pixivez.ui.search.NavSearchFragment
 
 /** 按 NavConfig 顺序装配的底部导航页面 */
 class MainNavPager(
@@ -31,7 +30,6 @@ class MainNavPager(
                     mutableMapOf("userid" to uid)
                 )
             }
-            NavPage.Search -> NavSearchFragment.newInstance()
             NavPage.Follow -> HelloMThFragment.newInstance("d")
             NavPage.Rank -> HelloTrendingFragment.newInstance("t")
         }

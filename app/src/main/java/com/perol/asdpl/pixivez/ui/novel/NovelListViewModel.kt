@@ -79,14 +79,14 @@ class NovelListViewModel : BaseViewModel() {
             if (com.perol.asdpl.pixivez.data.SearchFilterStore.excludeTags().isNotEmpty()) {
                 novels.removeAll { novel ->
                     novel.tags.any { tag ->
-                        com.perol.asdpl.pixivez.data.SearchFilterStore.isExcluded(tag.name)
+                        com.perol.asdpl.pixivez.data.SearchFilterStore.isExcluded(tag.vis())
                     }
                 }
             }
             if (com.perol.asdpl.pixivez.data.SearchFilterStore.includeTags().isNotEmpty()) {
                 novels.removeAll { novel ->
                     novel.tags.none { tag ->
-                        com.perol.asdpl.pixivez.data.SearchFilterStore.isIncluded(tag.name)
+                        com.perol.asdpl.pixivez.data.SearchFilterStore.isIncluded(tag.vis())
                     }
                 }
             }

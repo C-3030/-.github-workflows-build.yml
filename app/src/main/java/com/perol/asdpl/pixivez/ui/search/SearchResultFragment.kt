@@ -174,13 +174,13 @@ class SearchResultViewModel : PicListViewModel() {
     private fun localSortByBookmarks(illusts: MutableList<Illust>): MutableList<Illust> {
         if (SearchFilterStore.excludeTags().isNotEmpty()) {
             illusts.removeAll { illust ->
-                illust.tags.any { tag -> SearchFilterStore.isExcluded(tag.name) }
+                illust.tags.any { tag -> SearchFilterStore.isExcluded(tag.vis()) }
             }
         }
         if (SearchFilterStore.includeTags().isNotEmpty()) {
             // 包含标签在服务端是 AND;这里再按 / 拆分子标签兜一次(如"幼女/未成年/萝莉")
             illusts.removeAll { illust ->
-                illust.tags.none { tag -> SearchFilterStore.isIncluded(tag.name) }
+                illust.tags.none { tag -> SearchFilterStore.isIncluded(tag.vis()) }
             }
         }
         if (sort.value == 2) illusts.sortByDescending { it.total_bookmarks }

@@ -149,9 +149,9 @@ class SearchActivity : RinkActivity() {
                     } else {
                         binding.searchviewText.inputType = EditorInfo.TYPE_CLASS_NUMBER
                     }
-                    // 只有"综合"需要选插画/小说;ID 搜索不需要
+                    // 综合与作品ID 都要选插画/小说;用户ID 不需要
                     binding.searchTypeGroup.visibility =
-                        if (tab.position == 0) View.VISIBLE else View.GONE
+                        if (tab.position == 2) View.GONE else View.VISIBLE
                 }
             }
 
@@ -176,8 +176,8 @@ class SearchActivity : RinkActivity() {
                             if (!query.isDigitsOnly()) {
                                 return true
                             }
-                            // 小说模式下按 id 直达小说,否则直达插画
-                            if (novelMode) {
+                            // 作品 ID:按当前选的插画/小说走,不再受首页模式限制
+                            if (binding.searchTypeNovel.isChecked) {
                                 NovelActivity.start(this@SearchActivity, query.toInt())
                             } else {
                                 PictureActivity.start(this@SearchActivity, query.toInt())
