@@ -13,6 +13,7 @@ import com.perol.asdpl.pixivez.R
 import com.perol.asdpl.pixivez.base.MaterialDialogs
 import com.perol.asdpl.pixivez.databinding.FragmentHistoryBinding
 import com.perol.asdpl.pixivez.services.PxEZApp
+import com.perol.asdpl.pixivez.ui.novel.NovelActivity
 import com.perol.asdpl.pixivez.ui.pic.PictureActivity
 import com.perol.asdpl.pixivez.ui.user.UserMActivity
 
@@ -59,8 +60,11 @@ class HistoryFragment : Fragment() {
                     Pair(view, "shared_element_container")
                 ).toBundle()
             } else null
-            if (item.isUser) UserMActivity.start(requireContext(), item.id, options)
-            else PictureActivity.start(requireContext(), item.id, options = options)
+            when {
+                item.isUser -> UserMActivity.start(requireContext(), item.id, options)
+                item.isNovel -> NovelActivity.start(requireContext(), item.id)
+                else -> PictureActivity.start(requireContext(), item.id, options = options)
+            }
         }
         historyAdapter.setOnItemLongClickListener { _, _, i ->
             MaterialDialogs(requireContext()).show {

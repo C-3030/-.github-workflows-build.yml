@@ -49,7 +49,7 @@ class SearchHistoryEntity(
 
 @Entity(
     tableName = "history",
-    primaryKeys = ["id", "isUser"]
+    primaryKeys = ["id", "isUser", "isNovel"]
 )
 class HistoryEntity(
     val id: Int,
@@ -57,6 +57,9 @@ class HistoryEntity(
     val thumb: String,
     @ColumnInfo(defaultValue = "false")
     val isUser: Boolean = false,
+    // 小说与插画的 id 各自编号,会撞车,所以类型也要进主键
+    @ColumnInfo(defaultValue = "false")
+    val isNovel: Boolean = false,
     @ColumnInfo(defaultValue = "1")
     var count: Int = 1,
     //@ColumnInfo(defaultValue = "CURRENT_TIMESTAMP")

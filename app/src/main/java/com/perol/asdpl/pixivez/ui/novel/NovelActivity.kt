@@ -32,6 +32,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.perol.asdpl.pixivez.IntentActivity
 import com.perol.asdpl.pixivez.R
 import com.perol.asdpl.pixivez.base.RinkActivity
+import com.perol.asdpl.pixivez.data.HistoryDatabase
+import com.perol.asdpl.pixivez.data.entity.HistoryEntity
 import com.perol.asdpl.pixivez.data.model.Novel
 import com.perol.asdpl.pixivez.data.model.NovelNaviItem
 import com.perol.asdpl.pixivez.databinding.ActivityNovelBinding
@@ -43,6 +45,8 @@ import com.perol.asdpl.pixivez.objects.Toasty
 import com.perol.asdpl.pixivez.services.PxEZApp
 import com.perol.asdpl.pixivez.ui.pic.PictureActivity
 import com.perol.asdpl.pixivez.ui.user.UserMActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 // 小说阅读页:头部(标题/作者/标签)+ 图文分块正文(标记渲染见 NovelMarkup),
@@ -107,6 +111,7 @@ class NovelActivity : RinkActivity() {
         viewModel.novel.observe(this) {
             adapter.novel = it
             adapter.notifyItemChanged(0)
+            it?.let { novel -> recordHistory(novel) }
         }
         viewModel.bookmarked.observe(this) { invalidateOptionsMenu() }
         viewModel.chunks.observe(this) {
@@ -241,6 +246,22 @@ class NovelActivity : RinkActivity() {
                     }
                 }
             }.show()
+    }
+
+    // 记入"浏览历史"(与插画同表,isNovel 区分);同一篇累加次数
+    private fun recordHistory(novel: Novel) {
+        val db = HistoryDatabase.getInstance(PxEZApp.instance)
+        val thumb = novel.image_urls.square_medium
+        CoroutineScope(Dispatchers.IO).launch {
+            val exist = db.viewHistoryDao().getEntity(novel.id, false, true)
+            if (exist != null) {
+                db.viewHistoryDao().increment(exist)
+            } else {
+                db.viewHistoryDao().insert(
+                    HistoryEntity(novel.id, novel.title, thumb, false, true)
+                )
+            }
+        }
     }
 
     private fun changeFont(delta: Float) {

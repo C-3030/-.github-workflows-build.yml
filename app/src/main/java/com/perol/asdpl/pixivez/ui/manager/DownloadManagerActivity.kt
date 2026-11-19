@@ -23,6 +23,8 @@ import com.perol.asdpl.pixivez.base.RinkActivity
 import com.perol.asdpl.pixivez.databinding.ActivityDownloadManagerBinding
 import com.perol.asdpl.pixivez.databinding.DialogDownloadConfigBinding
 import com.perol.asdpl.pixivez.networks.ServiceFactory.gson
+import com.perol.asdpl.pixivez.data.NovelDownloadStore
+import com.perol.asdpl.pixivez.objects.Toasty
 import com.perol.asdpl.pixivez.services.IllustD
 import com.perol.asdpl.pixivez.services.PxEZApp
 import com.perol.asdpl.pixivez.services.Works
@@ -71,6 +73,7 @@ class DownloadManagerActivity : RinkActivity() {
                 binding.downloadlistrefreshlayout.isRefreshing = false
             }
         }
+        setupNovelList()
         refreshList()
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -83,6 +86,54 @@ class DownloadManagerActivity : RinkActivity() {
                 }
             }
         }
+    }
+
+    // 小说导出记录(与 ketch 队列分开,点一下可复制路径/删记录)
+    private fun setupNovelList() {
+        val novelAdapter = NovelDownloadAdapter()
+        binding.novelList.layoutManager = LinearLayoutManager(this)
+        binding.novelList.adapter = novelAdapter
+        novelAdapter.setOnItemClickListener { _, _, position ->
+            val item = novelAdapter.data[position]
+            MaterialDialogs(this).show {
+                setTitle(item.title)
+                setMessage(item.path)
+                confirmButton { _, _ ->
+                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(
+                        android.content.ClipData.newPlainText("novel", item.path)
+                    )
+                    Toasty.normal(this@DownloadManagerActivity, R.string.copied)
+                }
+                cancelButton()
+            }
+        }
+        novelAdapter.setOnItemLongClickListener { _, _, position ->
+            val item = novelAdapter.data[position]
+            MaterialDialogs(this).show {
+                setTitle(item.title)
+                confirmButton { _, _ ->
+                    NovelDownloadStore.remove(item)
+                    renderNovelList(novelAdapter)
+                }
+                cancelButton()
+            }
+            true
+        }
+        renderNovelList(novelAdapter)
+    }
+
+    private fun renderNovelList(adapter: NovelDownloadAdapter) {
+        val list = NovelDownloadStore.all()
+        adapter.setList(list)
+        val visible = list.isNotEmpty()
+        binding.novelHeader.visibility = if (visible) android.view.View.VISIBLE else android.view.View.GONE
+        binding.novelList.visibility = if (visible) android.view.View.VISIBLE else android.view.View.GONE
+    }
+
+    override fun onResume() {
+        super.onResume()
+        (binding.novelList.adapter as? NovelDownloadAdapter)?.let { renderNovelList(it) }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

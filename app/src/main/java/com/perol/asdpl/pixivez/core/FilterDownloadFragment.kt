@@ -292,7 +292,10 @@ class SelectDownloadFragment : PicListFragment() {
 
     private fun selectedHintStr(debug: Boolean = false): String {
         val skipped = selectedButHided.size
-        return "${selectedFlag.size - skipped}/${(viewModel.data.value ?: DataHolder.dataListRef!!).size}" +
+        // configByTAG 会在数据回来之前调用(抽屉"多选下载"入口没有列表上下文,
+        // DataHolder.dataListRef 为 null),这里必须容忍两种来源都为空。
+        val total = viewModel.data.value?.size ?: DataHolder.dataListRef?.size ?: 0
+        return "${selectedFlag.size - skipped}/$total" +
                 if (debug) "(${skipped} skipped)" else ""
     }
 

@@ -37,7 +37,7 @@ import com.perol.asdpl.pixivez.services.PxEZApp
 
 @Database(
     entities = [SearchHistoryEntity::class, HistoryEntity::class],
-    version = 2
+    version = 3
 )
 abstract class HistoryDatabase : RoomDatabase() {
     abstract fun searchHistoryDao(): SearchHistoryDao
@@ -59,12 +59,36 @@ abstract class HistoryDatabase : RoomDatabase() {
             it.execSQL("DELETE FROM search WHERE id NOT IN (SELECT MIN(id) FROM search GROUP BY word)")
             it.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_search_word` ON `search` (`word`)")
         }
+        // 2 -> 3:历史加"小说"类型。小说/插画的 id 各自编号会重复,
+        // 所以 isNovel 也要进主键,SQLite 不支持改主键,只能重建表。
+        private val migration2to3 = Migration(2, 3) {
+            it.execSQL(
+                "CREATE TABLE IF NOT EXISTS \`history_new\` (" +
+                    "\`id\` INTEGER NOT NULL, " +
+                    "\`title\` TEXT NOT NULL, " +
+                    "\`thumb\` TEXT NOT NULL, " +
+                    "\`isUser\` INTEGER NOT NULL DEFAULT 0, " +
+                    "\`isNovel\` INTEGER NOT NULL DEFAULT 0, " +
+                    "\`count\` INTEGER NOT NULL DEFAULT 1, " +
+                    "\`createdAt\` INTEGER NOT NULL, " +
+                    "\`modifiedAt\` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(\`id\`, \`isUser\`, \`isNovel\`))"
+            )
+            it.execSQL(
+                "INSERT OR REPLACE INTO \`history_new\` " +
+                    "(\`id\`,\`title\`,\`thumb\`,\`isUser\`,\`isNovel\`,\`count\`,\`createdAt\`,\`modifiedAt\`) " +
+                    "SELECT \`id\`,\`title\`,\`thumb\`,\`isUser\`,0,\`count\`,\`createdAt\`,\`modifiedAt\` FROM \`history\`"
+            )
+            it.execSQL("DROP TABLE \`history\`")
+            it.execSQL("ALTER TABLE \`history_new\` RENAME TO \`history\`")
+        }
+
         private fun buildDatabase(context: Context) =
             Room.databaseBuilder(
                 context.applicationContext,
                 HistoryDatabase::class.java,
                 "history.db"
-            ).addMigrations(migration1to2)
+            ).addMigrations(migration1to2, migration2to3)
                 .fallbackToDestructiveMigrationOnDowngrade()
                 .build()
     }

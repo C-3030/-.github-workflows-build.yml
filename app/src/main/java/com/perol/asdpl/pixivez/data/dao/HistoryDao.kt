@@ -78,8 +78,12 @@ interface ViewHistoryDao {
     @Query("SELECT * FROM history ORDER BY modifiedAt DESC")
     suspend fun getAll(): List<HistoryEntity>
 
-    @Query("SELECT * FROM history where id=(:id) and isUser=(:isUser) LIMIT 1")
-    suspend fun getEntity(id: Int, isUser: Boolean = false): HistoryEntity?
+    @Query("SELECT * FROM history where id=(:id) and isUser=(:isUser) and isNovel=(:isNovel) LIMIT 1")
+    suspend fun getEntity(
+        id: Int,
+        isUser: Boolean = false,
+        isNovel: Boolean = false
+    ): HistoryEntity?
 
     //@Query("SELECT * FROM history where id=(:id) and NOT user LIMIT 1")
     //suspend fun getIllust(id: Int): IllustEntity
@@ -87,8 +91,14 @@ interface ViewHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(query: HistoryEntity)
 
-    @Query("INSERT INTO history (id,title,thumb,isUser) VALUES (:id,:title,:thumb,:isUser)")
-    suspend fun insert(id: Int, title: String, thumb: String, isUser: Boolean = false)
+    @Query("INSERT INTO history (id,title,thumb,isUser,isNovel) VALUES (:id,:title,:thumb,:isUser,:isNovel)")
+    suspend fun insert(
+        id: Int,
+        title: String,
+        thumb: String,
+        isUser: Boolean = false,
+        isNovel: Boolean = false
+    )
 
     @Update(entity = HistoryEntity::class)
     suspend fun update(item: HistoryEntity)
@@ -104,8 +114,8 @@ interface ViewHistoryDao {
     suspend fun delete(query: HistoryEntity)
 
     //@Delete(entity = HistoryEntity::class)
-    @Query("DELETE FROM history WHERE id=(:id) and isUser=(:isUser)")
-    suspend fun delete(id: Int, isUser: Boolean)
+    @Query("DELETE FROM history WHERE id=(:id) and isUser=(:isUser) and isNovel=(:isNovel)")
+    suspend fun delete(id: Int, isUser: Boolean, isNovel: Boolean = false)
 
     @Query("DELETE FROM history")
     suspend fun clear()

@@ -43,7 +43,7 @@ class HistoryAdapter :
         holder.setText(R.id.title, item.title)
         holder.setTextColor(
             R.id.title,
-            if (item.isUser) ThemeUtil.getColorHighlight(context)
+            if (item.isUser || item.isNovel) ThemeUtil.getColorHighlight(context)
             else ThemeUtil.getTextColorPrimary(context)
         )
     }

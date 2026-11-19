@@ -2,6 +2,8 @@ package com.perol.asdpl.pixivez.ui.novel
 
 import android.content.Context
 import androidx.core.text.HtmlCompat
+import com.perol.asdpl.pixivez.data.NovelDownload
+import com.perol.asdpl.pixivez.data.NovelDownloadStore
 import com.perol.asdpl.pixivez.data.model.Novel
 import com.perol.asdpl.pixivez.services.PxEZApp
 import com.perol.asdpl.pixivez.services.toLegal
@@ -53,6 +55,18 @@ object NovelExporter {
             Format.TXT -> writeTxt(file, novel, chunks)
             Format.EPUB -> writeEpub(file, novel, chunks)
         }
+        // 记一笔,下载进度页据此把小说也列出来
+        NovelDownloadStore.add(
+            NovelDownload(
+                id = novel.id,
+                title = novel.title,
+                author = novel.user.name,
+                format = format.name,
+                path = file.absolutePath,
+                size = file.length(),
+                time = System.currentTimeMillis()
+            )
+        )
         file
     }
 
