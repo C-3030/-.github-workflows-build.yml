@@ -7,10 +7,4 @@
         android:title="@string/search_filter"
         app:iconTint="?android:colorControlNormal"
         app:showAsAction="ifRoom" />
-    <item
-        android:id="@+id/action_tag_favorites"
-        android:icon="@drawable/ic_star_outline"
-        android:title="@string/tag_favorites"
-        app:iconTint="?android:colorControlNormal"
-        app:showAsAction="ifRoom" />
 </menu>

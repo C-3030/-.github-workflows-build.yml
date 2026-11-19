@@ -63,6 +63,7 @@ object NovelExporter {
                 author = novel.user.name,
                 format = format.name,
                 path = file.absolutePath,
+                thumb = novel.image_urls.medium,
                 size = file.length(),
                 time = System.currentTimeMillis()
             )
@@ -88,6 +89,7 @@ object NovelExporter {
                 author = novel.user.name,
                 format = "COVER",
                 path = file.absolutePath,
+                thumb = url,
                 size = file.length(),
                 time = System.currentTimeMillis()
             )

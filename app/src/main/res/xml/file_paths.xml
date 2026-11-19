@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 让外部应用能打开下载目录里的文件(图片/小说) -->
+<paths>
+    <external-path name="pxez_external" path="." />
+    <files-path name="pxez_files" path="." />
+    <cache-path name="pxez_cache" path="." />
+</paths>

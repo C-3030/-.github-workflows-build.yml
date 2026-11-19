@@ -17,7 +17,7 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
             android:theme="@style/MyToolbar"
-            app:title="@string/download_progress"
+            app:title="@string/download"
             app:titleTextColor="?android:attr/textColorPrimaryInverse">
 
             <TextView
@@ -43,30 +43,12 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- 小说导出没有 ketch 队列,单独一段列出 -->
-            <TextView
-                android:id="@+id/novel_header"
+            <!-- 插画 / 小说的下载分开看 -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/download_tabs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingStart="16dp"
-                android:paddingTop="8dp"
-                android:paddingEnd="16dp"
-                android:text="@string/novel_download"
-                android:textStyle="bold"
-                android:visibility="gone" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/novel_list"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:maxHeight="220dp"
-                android:nestedScrollingEnabled="false"
-                android:visibility="gone" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?attr/colorControlHighlight" />
+                app:tabMode="fixed" />
 
             <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
                 android:id="@+id/downloadlistrefreshlayout"

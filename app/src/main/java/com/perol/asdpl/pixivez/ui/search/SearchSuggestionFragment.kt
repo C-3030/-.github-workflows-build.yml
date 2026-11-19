@@ -46,7 +46,9 @@ class SearchSuggestionFragment : Fragment() {
         tagsTextAdapter.setOnItemClickListener { adapter, view, position ->
             val tag = searchSuggestionViewModel.autoCompleteTags.value!![position]
             searchSuggestionViewModel.addHistory(tag)
-            SearchRouter.startWordSearch(requireActivity(), tag.name)
+            val searchActivity = activity as? SearchActivity
+            if (searchActivity != null) searchActivity.submitQuery(tag.name)
+            else SearchRouter.startWordSearch(requireActivity(), tag.name)
         }
         binding.advices.visibility = View.GONE
         searchSuggestionViewModel.autoCompleteTags.observe(viewLifecycleOwner) {

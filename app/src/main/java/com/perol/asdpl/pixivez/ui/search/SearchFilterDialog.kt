@@ -47,6 +47,9 @@ class SearchFilterDialog : DialogFragment() {
         bindInput(view.findViewById(R.id.include_input), include, includeChips)
         bindInput(view.findViewById(R.id.exclude_input), exclude, excludeChips)
         renderPresets(view.findViewById(R.id.preset_chips))
+        view.findViewById<android.view.View>(R.id.tag_favorites).setOnClickListener {
+            TagFavoriteDialog.show(parentFragmentManager)
+        }
         renderChips(include, includeChips)
         renderChips(exclude, excludeChips)
         return MaterialAlertDialogBuilder(requireContext())

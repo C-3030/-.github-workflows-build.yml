@@ -40,6 +40,7 @@ class DownloadManagerActivity : RinkActivity() {
 
     private lateinit var binding: ActivityDownloadManagerBinding
     private lateinit var downloadTaskAdapter: DownloadTaskAdapter
+    private lateinit var novelAdapter: NovelDownloadAdapter
     private val ketch by lazy { PxEZApp.instance.ketch }
 
     internal class KetchDiffCallback : DiffUtil.ItemCallback<DownloadModel>() {
@@ -65,6 +66,7 @@ class DownloadManagerActivity : RinkActivity() {
             adapter = downloadTaskAdapter
             layoutManager = LinearLayoutManager(context)
         }
+        setupTabs()
         binding.downloadlistrefreshlayout.setOnRefreshListener {
             // refreshList() //TODO: fix list refresh
             lifecycleScope.launch {
@@ -75,67 +77,50 @@ class DownloadManagerActivity : RinkActivity() {
             }
         }
         binding.progress.text = getString(R.string.fractional, 0, 0)
-        setupNovelList()
         refreshList()
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ketch.observeDownloads().flowOn(Dispatchers.IO).collect {
                     downloadTaskAdapter.setDiffNewData(it.asReversed().toMutableList())
-                    binding.progress.text = getString(
-                        R.string.fractional,
-                        it.count { it.status != Status.SUCCESS }, it.size
-                    )
+                    updateCount(it)
                 }
             }
         }
     }
 
-    // 小说导出记录(与 ketch 队列分开,点一下可复制路径/删记录)
-    private fun setupNovelList() {
-        val novelAdapter = NovelDownloadAdapter()
-        binding.novelList.layoutManager = LinearLayoutManager(this)
-        binding.novelList.adapter = novelAdapter
-        novelAdapter.setOnItemClickListener { _, _, position ->
-            val item = novelAdapter.data[position]
-            MaterialDialogs(this).show {
-                setTitle(item.title)
-                setMessage(item.path)
-                confirmButton { _, _ ->
-                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    clipboard.setPrimaryClip(
-                        android.content.ClipData.newPlainText("novel", item.path)
-                    )
-                    Toasty.normal(this@DownloadManagerActivity, R.string.copied)
-                }
-                cancelButton()
+    // 顶部 插画/小说 两个分栏,各自一个列表;点条目用第三方应用打开
+    private fun setupTabs() {
+        novelAdapter = NovelDownloadAdapter()
+        binding.downloadTabs.removeAllTabs()
+        binding.downloadTabs.addTab(binding.downloadTabs.newTab().setText(R.string.works_illust))
+        binding.downloadTabs.addTab(binding.downloadTabs.newTab().setText(R.string.works_novel))
+        binding.downloadTabs.addOnTabSelectedListener(object :
+            com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab) {
+                renderTab(tab.position)
             }
-        }
-        novelAdapter.setOnItemLongClickListener { _, _, position ->
-            val item = novelAdapter.data[position]
-            MaterialDialogs(this).show {
-                setTitle(item.title)
-                confirmButton { _, _ ->
-                    NovelDownloadStore.remove(item)
-                    renderNovelList(novelAdapter)
-                }
-                cancelButton()
-            }
-            true
-        }
-        renderNovelList(novelAdapter)
+
+            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
+            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
+        })
+        renderTab(0)
     }
 
-    private fun renderNovelList(adapter: NovelDownloadAdapter) {
-        val list = NovelDownloadStore.all()
-        adapter.setList(list)
-        val visible = list.isNotEmpty()
-        binding.novelHeader.visibility = if (visible) android.view.View.VISIBLE else android.view.View.GONE
-        binding.novelList.visibility = if (visible) android.view.View.VISIBLE else android.view.View.GONE
+    private fun renderTab(position: Int) {
+        if (position == 0) {
+            binding.progressList.adapter = downloadTaskAdapter
+        } else {
+            novelAdapter.setList(NovelDownloadStore.all())
+            binding.progressList.adapter = novelAdapter
+        }
     }
 
-    override fun onResume() {
-        super.onResume()
-        (binding.novelList.adapter as? NovelDownloadAdapter)?.let { renderNovelList(it) }
+    // 顶部计数:插画任务 + 小说导出记录一起算
+    private fun updateCount(models: List<com.ketch.DownloadModel>) {
+        val novels = NovelDownloadStore.all()
+        val total = models.size + novels.size
+        val pending = models.count { it.status != Status.SUCCESS }
+        binding.progress.text = getString(R.string.fractional, pending, total)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -311,14 +296,20 @@ class DownloadManagerActivity : RinkActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             val list = ketch.getAllDownloads().asReversed()
             downloadTaskAdapter.setList(list)
-            // 进页面先把计数写上,别停在布局里的 "?/?" 占位
             withContext(Dispatchers.Main) {
-                binding.progress.text = getString(
-                    R.string.fractional,
-                    list.count { it.status != Status.SUCCESS },
-                    list.size
-                )
+                // 进页面先把计数写上,别停在布局里的 "?/?" 占位
+                updateCount(list)
+                if (binding.downloadTabs.selectedTabPosition == 1) {
+                    novelAdapter.setList(NovelDownloadStore.all())
+                }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (binding.downloadTabs.selectedTabPosition == 1) {
+            novelAdapter.setList(NovelDownloadStore.all())
         }
     }
 

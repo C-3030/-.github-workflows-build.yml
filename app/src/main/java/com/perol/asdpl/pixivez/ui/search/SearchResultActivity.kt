@@ -75,11 +75,6 @@ class SearchResultActivity : RinkActivity() {
                 FragmentActivity.start(this, "Block")
             }
 
-            R.id.action_tag_favorites -> {
-                TagFavoriteDialog.show(supportFragmentManager)
-                return true
-            }
-
             R.id.action_search_filter -> {
                 SearchFilterDialog.show(supportFragmentManager)
                 return true

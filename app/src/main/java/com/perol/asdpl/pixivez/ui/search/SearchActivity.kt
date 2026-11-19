@@ -78,11 +78,6 @@ class SearchActivity : RinkActivity() {
                 return true
             }
 
-            R.id.action_tag_favorites -> {
-                TagFavoriteDialog.show(supportFragmentManager)
-                return true
-            }
-
             R.id.action_search_filter -> {
                 SearchFilterDialog.show(supportFragmentManager)
                 return true
@@ -228,6 +223,13 @@ class SearchActivity : RinkActivity() {
         )
         supportFragmentManager.putFragment(outState, "trendTagFragment", trendTagFragment)
         super.onSaveInstanceState(outState)
+    }
+
+    /** 供历史/联想词调用:按当前 tab 与 插画/小说 选择提交搜索 */
+    fun submitQuery(query: String) {
+        if (query.isBlank()) return
+        binding.tablayoutSearch.selectTab(binding.tablayoutSearch.getTabAt(0))
+        binding.searchviewText.setQuery(query, true)
     }
 
     // 插画(含漫画)结果:直接开结果页,绕开 SearchRouter 的 main_mode 分派

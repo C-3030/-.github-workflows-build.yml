@@ -416,7 +416,7 @@ private class NovelReaderAdapter(
             sb.append("#${tag.name}")
             sb.setSpan(object : ClickableSpan() {
                 override fun onClick(widget: View) =
-                    NovelSearchResultActivity.start(widget.context, tag.name)
+                    com.perol.asdpl.pixivez.ui.search.TagActions.show(widget.context, tag.name)
             }, start, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         b.novelTags.text = sb

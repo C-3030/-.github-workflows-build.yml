@@ -37,16 +37,25 @@ import com.perol.asdpl.pixivez.networks.ServiceFactory.gson
 import com.perol.asdpl.pixivez.objects.ViewBindingUtil.getBinding
 import com.perol.asdpl.pixivez.services.IllustD
 import com.perol.asdpl.pixivez.services.PxEZApp
+import com.perol.asdpl.pixivez.objects.FileOpenUtil
 import com.perol.asdpl.pixivez.ui.pic.PictureActivity
+import com.bumptech.glide.Glide
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import java.io.File
 
 @SuppressLint("CheckResult")
 class DownloadTaskAdapter :
-    BaseQuickAdapter<DownloadModel, BaseViewHolder>(R.layout.item_download_task) {
+    BaseQuickAdapter<DownloadModel, BaseViewHolder>(R.layout.item_download_row) {
     init {
         this.setOnItemClickListener { adapter, view, position ->
             val item = data[position]
-            val illust = gson.decodeFromString<IllustD>(item.metaData)
-            PictureActivity.start(context, id = illust.id)
+            // 下载好的文件用第三方应用打开
+            if (item.status == Status.SUCCESS) {
+                FileOpenUtil.open(context, File(item.path, item.fileName))
+            } else {
+                val illust = gson.decodeFromString<IllustD>(item.metaData)
+                PictureActivity.start(context, id = illust.id)
+            }
         }
         this.setOnItemLongClickListener { adapter, view, position ->
             val item = data[position]
@@ -169,44 +178,33 @@ class DownloadTaskAdapter :
 
     @SuppressLint("SetTextI18n")
     override fun convert(holder: BaseViewHolder, item: DownloadModel, payloads: List<Any>) {
-        val binding = holder.getBinding(ItemDownloadTaskBinding::bind)
         if (payloads.isNotEmpty()) {
-            val thatItem = payloads[0] as DownloadModel
-            binding.progress.progress = thatItem.progress
-            binding.progressFont.text =
-                item.progress.toString() + "%/" + getTotalLengthText(item.total)
-            binding.status.text = getCompleteText(
-                item.status,
-                item.speedInBytePerMs,
-                item.progress,
-                item.total
-            )
+            holder.getView<android.widget.ProgressBar>(R.id.row_progress).progress = item.progress
+            holder.setText(R.id.row_status, statusText(item))
         }
     }
 
+    private fun statusText(item: DownloadModel): String =
+        getCompleteText(item.status, item.speedInBytePerMs, item.progress, item.total)
+
     @SuppressLint("SetTextI18n")
     override fun convert(holder: BaseViewHolder, item: DownloadModel) {
-        val binding = holder.getBinding(ItemDownloadTaskBinding::bind)
-        binding.progress.progress = item.progress
-        binding.progressFont.text =
-            context.getString(
-                R.string.fractional,
-                item.progress * item.total / 100, //TODO: add ketch feature
-                item.total
-            )
-        binding.progressFont.text =
-            item.progress.toString() + "%/" + getTotalLengthText(item.total)
-        binding.status.text = getCompleteText(
-            item.status,
-            item.speedInBytePerMs,
-            item.progress,
-            item.total
-        )
+        holder.getView<android.widget.ProgressBar>(R.id.row_progress).progress = item.progress
+        holder.setText(R.id.row_status, statusText(item))
+        var title = item.fileName
         try {
             val illustD = gson.decodeFromString<IllustD>(item.metaData)
-            binding.title.text = "${illustD.title}${illustD.pString("_p")}"
+            title = "${illustD.title}${illustD.pString("_p")}"
         } catch (e: Exception) {
-            e.printStackTrace()
+            // metaData 不合法时退回文件名
         }
+        holder.setText(R.id.row_title, title)
+        // 封面:已下载就用本地文件,否则用图片地址(Glide 已带 pixiv 头)
+        val cover = holder.getView<android.widget.ImageView>(R.id.row_cover)
+        val local = File(item.path, item.fileName)
+        Glide.with(cover)
+            .load(if (local.exists()) local else item.url)
+            .centerCrop()
+            .into(cover)
     }
 }

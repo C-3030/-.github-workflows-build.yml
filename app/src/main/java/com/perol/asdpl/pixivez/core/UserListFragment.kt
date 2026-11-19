@@ -50,6 +50,7 @@ import com.perol.asdpl.pixivez.databinding.FragmentListBinding
 import com.perol.asdpl.pixivez.databinding.ViewUserGroupBarBinding
 import com.perol.asdpl.pixivez.databinding.ViewUserWorksSwitchBinding
 import com.perol.asdpl.pixivez.databinding.ViewRestrictButtonBinding
+import com.perol.asdpl.pixivez.databinding.ViewUserListHeaderBinding
 import com.perol.asdpl.pixivez.objects.InteractionUtil.visRestrictTag
 import com.perol.asdpl.pixivez.objects.Toasty
 import com.perol.asdpl.pixivez.objects.argument
@@ -83,6 +84,7 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
     private var userid: Int? by argumentNullable()
     // -----------------
 
+    private var _header: ViewUserListHeaderBinding? = null
     private var _bindingHeader: ViewRestrictButtonBinding? = null
     private val bindingHeader: ViewRestrictButtonBinding
         get() = requireNotNull(_bindingHeader) { "The property of binding has been destroyed." }
@@ -98,7 +100,6 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
     private val selected = LinkedHashSet<Int>()
     private var fullData: MutableList<UserPreviewsBean> = mutableListOf()
     private var _groupBar: ViewUserGroupBarBinding? = null
-    private var _worksSwitch: ViewUserWorksSwitchBinding? = null
     private val groupBar: ViewUserGroupBarBinding?
         get() = _groupBar
 
@@ -117,8 +118,9 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        if (viewModel.needHeader && _bindingHeader == null) {
-            _bindingHeader = ViewRestrictButtonBinding.inflate(inflater)
+        if (viewModel.needHeader && _header == null) {
+            _header = ViewUserListHeaderBinding.inflate(inflater)
+            _bindingHeader = _header!!.restrict
         }
         return super.onCreateView(inflater, container, savedInstanceState)
     }
@@ -130,7 +132,21 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
         initViewModel()
 
         if (viewModel.needHeader) {
-            userListAdapter.addHeaderView(bindingHeader.root)
+            userListAdapter.addHeaderView(requireNotNull(_header) { "header missing" }.root)
+            // 右侧按钮:切换卡片里展示 插画 / 小说
+            _header!!.buttonWorksType.text = if (userListAdapter.novelStrip) {
+                getString(R.string.works_novel)
+            } else {
+                getString(R.string.works_illust)
+            }
+            _header!!.buttonWorksType.setOnClickListener {
+                userListAdapter.novelStrip = !userListAdapter.novelStrip
+                _header!!.buttonWorksType.text = if (userListAdapter.novelStrip) {
+                    getString(R.string.works_novel)
+                } else {
+                    getString(R.string.works_illust)
+                }
+            }
             bindingHeader.buttonPublic.isChecked = true
             bindingHeader.buttonAll.visibility = View.GONE
             bindingHeader.toggleRestrict.addOnButtonCheckedListener { group, checkedId, isChecked ->
@@ -214,8 +230,8 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
 
     override fun onDestroy() {
         _bindingHeader = null
+        _header = null
         _groupBar = null
-        _worksSwitch = null
         super.onDestroy()
     }
 

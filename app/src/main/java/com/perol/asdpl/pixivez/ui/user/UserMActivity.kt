@@ -184,6 +184,16 @@ class UserMActivity : RinkActivity() {
         AutoTabLayoutMediator(binding.tablayout, binding.viewpager) { tab, position ->
             tab.text = getString(UserMPagerAdapter.getPageTitle(position))
         }.attach().setOnTabReSelectedStrategy { upToTopListener.onTabReselected(it) }
+        binding.tablayout.addOnTabSelectedListener(object :
+            com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab) {
+                applyTabStyle()
+            }
+
+            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
+            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
+        })
+        applyTabStyle()
         viewModel.currentTab.observeAfterSet(this) {
             binding.viewpager.setCurrentItem(it, false)
         }
@@ -300,7 +310,8 @@ class UserMActivity : RinkActivity() {
                         }
 
                         State.EXPANDED -> {
-                            binding.tablayout.tabTextColors = defaultTablayoutColors
+                            // 展开态:文字颜色保持一致,选中项只靠灰色底区分
+                            applyTabStyle()
                             binding.tablayout.translationX = 0f
                         }
 
@@ -351,6 +362,19 @@ class UserMActivity : RinkActivity() {
         textIntent.type = "text/plain"
         textIntent.putExtra(Intent.EXTRA_TEXT, "https://www.pixiv.net/member.php?id=$id")
         startActivity(Intent.createChooser(textIntent, getString(R.string.share)))
+    }
+
+    // 选中态不做变灰处理:文字保持原色,选中项在文字周围加一层灰色底
+    private fun applyTabStyle() {
+        val color = ThemeUtil.getTextColorPrimary(this@UserMActivity)
+        binding.tablayout.setTabTextColors(color, color)
+        val selected = binding.tablayout.selectedTabPosition
+        for (i in 0 until binding.tablayout.tabCount) {
+            val tab = binding.tablayout.getTabAt(i) ?: continue
+            tab.view.setBackgroundResource(
+                if (i == selected) R.drawable.bg_tab_selected else 0
+            )
+        }
     }
 
     private fun batchDownload() {

@@ -15,6 +15,8 @@ data class NovelDownload(
     val author: String = "",
     val format: String = "TXT",
     val path: String = "",
+    // 封面地址(列表里显示缩略图用)
+    val thumb: String = "",
     val size: Long = 0L,
     val time: Long = 0L,
 )

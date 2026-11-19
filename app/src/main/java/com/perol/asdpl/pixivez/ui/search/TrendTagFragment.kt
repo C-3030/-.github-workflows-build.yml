@@ -183,6 +183,9 @@ class TrendTagFragment : Fragment() {
 
     private fun upToPage(query: String) {
         val nameQuery = query.split('|')[0]
-        SearchRouter.startWordSearch(requireActivity(), nameQuery)
+        // 交给搜索页,由它按当前选的 插画/小说 决定去哪,不再按首页模式分派
+        val searchActivity = activity as? SearchActivity
+        if (searchActivity != null) searchActivity.submitQuery(nameQuery)
+        else SearchRouter.startWordSearch(requireActivity(), nameQuery)
     }
 }
