@@ -31,6 +31,9 @@ class NavSearchFragment : Fragment() {
             SearchActivity.start(requireContext(), keyword)
         }
         button.setOnClickListener { doSearch() }
+        view.findViewById<MaterialButton>(R.id.navSearchFilter)?.setOnClickListener {
+            SearchFilterDialog.show(childFragmentManager)
+        }
         input.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) { doSearch(); true } else false
         }

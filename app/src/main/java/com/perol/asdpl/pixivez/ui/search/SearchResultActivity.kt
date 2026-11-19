@@ -60,6 +60,7 @@ class SearchResultActivity : RinkActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_block_tag, menu)
+        menuInflater.inflate(R.menu.menu_search_filter, menu)
         return super.onCreateOptionsMenu(menu)
     }
 
@@ -72,6 +73,11 @@ class SearchResultActivity : RinkActivity() {
 
             R.id.action_block_tag -> {
                 FragmentActivity.start(this, "Block")
+            }
+
+            R.id.action_search_filter -> {
+                SearchFilterDialog.show(supportFragmentManager)
+                return true
             }
         }
         return super.onOptionsItemSelected(item)

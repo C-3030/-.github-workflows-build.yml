@@ -26,6 +26,9 @@ sealed class Event {
         val diff: Int? = null,
         val add: Boolean = false
     ) : Event()
+
+    /** 搜索筛选(包含/排除标签)被修改,结果页据此重新搜索 */
+    object SearchFilterChanged : Event()
 }
 
 /** to add ref: https://github.com/biubiuqiu0/flow-event-bus

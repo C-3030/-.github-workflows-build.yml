@@ -389,20 +389,49 @@ class MainActivity : RinkActivity(), NavigationView.OnNavigationItemSelectedList
             NavHeaderMainBinding.bind(binding.navView.getHeaderView(0)),
             AppDataRepo.currentUser
         )
-        // 按配置渲染底部导航：图标 + 白色描边文字
-        val navPages = NavConfig.visiblePages()
-        for (i in navPages.indices) {
-            val tab = binding.tablayout.getTabAt(i) ?: continue
-            tab.icon = ContextCompat.getDrawable(this, navPages[i].iconRes)
-            val label = android.widget.TextView(this).apply {
-                text = navPages[i].title
-                setTextColor(android.graphics.Color.WHITE)
-                textSize = 11f
-                gravity = android.view.Gravity.CENTER
-                setShadowLayer(2.5f, 0f, 0f, android.graphics.Color.BLACK)
-            }
-            tab.setCustomView(label)
+        renderBottomNav(novelMode)
+    }
+
+    // 底部导航:每个 tab 自绘「图标 + 白色描边文字」。
+    // 注意 TabLayout 一旦 setCustomView,自带的 icon/文字都不再绘制,
+    // 所以图标必须画进自定义视图里,否则只显示文字(图标"消失")。
+    private fun renderBottomNav(novelMode: Boolean) {
+        val entries: List<Pair<String, Int>> = if (novelMode) {
+            com.perol.asdpl.pixivez.ui.novel.NovelPage.entries.map { it.title to it.iconRes }
+        } else {
+            NavConfig.visiblePages().map { it.title to it.iconRes }
         }
+        for (i in 0 until binding.tablayout.tabCount) {
+            val tab = binding.tablayout.getTabAt(i) ?: continue
+            val entry = entries.getOrNull(i) ?: continue
+            tab.setCustomView(buildBottomNavTab(entry.first, entry.second))
+        }
+    }
+
+    private fun buildBottomNavTab(title: String, iconRes: Int): View {
+        val context = this
+        val container = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 0, 0, 0)
+        }
+        val icon = ImageView(context).apply {
+            setImageResource(iconRes)
+            imageTintList = android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.WHITE
+            )
+            layoutParams = android.widget.LinearLayout.LayoutParams(20.dp, 20.dp)
+        }
+        val label = android.widget.TextView(context).apply {
+            text = title
+            setTextColor(android.graphics.Color.WHITE)
+            textSize = 11f
+            gravity = android.view.Gravity.CENTER
+            setShadowLayer(2.5f, 0f, 0f, android.graphics.Color.BLACK)
+        }
+        container.addView(icon)
+        container.addView(label)
+        return container
     }
 
     override fun onResume() {

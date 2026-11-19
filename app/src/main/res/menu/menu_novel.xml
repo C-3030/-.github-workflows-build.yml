@@ -5,9 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <item
         android:id="@+id/action_novel_bookmark"
-        android:icon="@drawable/ic_action_hearts"
+        android:icon="@drawable/ic_love_outline"
         android:title="@string/bookmark"
-        app:iconTint="?android:colorControlNormal"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_novel_font_larger"

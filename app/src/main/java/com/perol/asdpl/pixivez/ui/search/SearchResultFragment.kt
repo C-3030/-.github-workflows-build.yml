@@ -3,6 +3,7 @@ package com.perol.asdpl.pixivez.ui.search
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.perol.asdpl.pixivez.R
 import com.perol.asdpl.pixivez.base.DMutableLiveData
@@ -12,10 +13,14 @@ import com.perol.asdpl.pixivez.core.PicListArgs
 import com.perol.asdpl.pixivez.core.PicListExtraArgs
 import com.perol.asdpl.pixivez.core.PicListFragment
 import com.perol.asdpl.pixivez.core.PicListViewModel
+import com.perol.asdpl.pixivez.data.SearchFilterStore
 import com.perol.asdpl.pixivez.data.model.Illust
 import com.perol.asdpl.pixivez.objects.Toasty
+import com.perol.asdpl.pixivez.services.Event
+import com.perol.asdpl.pixivez.services.FlowEventBus
 import com.perol.asdpl.pixivez.services.PxEZApp
 import com.perol.asdpl.pixivez.ui.pic.PictureActivity
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 class SearchResultFragment : PicListFragment() {
@@ -46,6 +51,13 @@ class SearchResultFragment : PicListFragment() {
                     viewModel.sort.checkUpdate(index)
                     headerBinding.imgBtnR.text = resources.getStringArray(R.array.sort)[index]
                 }
+            }
+        }
+        // 搜索筛选改动(包含/排除标签)→ 重新搜索
+        viewLifecycleOwner.lifecycleScope.launch {
+            FlowEventBus.observe<Event.SearchFilterChanged>(viewLifecycleOwner) {
+                viewModel.onLoadFirst()
+                binding.recyclerview.scrollToPosition(0)
             }
         }
         binding.fab.visibility = View.VISIBLE
@@ -110,7 +122,7 @@ class SearchResultViewModel : PicListViewModel() {
         isRefreshing.value = true
         subscribeNext({
             retrofit.api.getSearchIllustPreview(word, sort, search_target, null, duration)
-        }, data, nextUrl) {
+        }, data, nextUrl, ::localSortByBookmarks) {
             isRefreshing.value = false
         }
     }
@@ -125,11 +137,13 @@ class SearchResultViewModel : PicListViewModel() {
             startDate.value = null
             endDate.value = null
         }
+        // 找到包含标签拼进搜索词(空格 = AND)
+        val effectiveWord = SearchFilterStore.applyIncludes(word)
         //if (!AppDataRepository.currentUser.ispro && sort.value == 2)
         if (isPreview && sort.value == 2) {
             Toasty.error(PxEZApp.instance, "not premium!")
             setPreview(
-                word,
+                effectiveWord,
                 sortT[sort.value],
                 searchTargetT[searchTarget],
                 durationT[selectDuration]
@@ -137,7 +151,7 @@ class SearchResultViewModel : PicListViewModel() {
         } else {
             subscribeNext({
                 retrofit.api.getSearchIllust(
-                    word,
+                    effectiveWord,
                     sortT[sort.value],
                     searchTargetT[searchTarget],
                     startDate.value.generateDateString(),
@@ -156,7 +170,14 @@ class SearchResultViewModel : PicListViewModel() {
     }
 
     //TODO: UI标识
+    // 排除标签:pixiv 没有反选语法,命中排除标签的作品在本地丢弃
     private fun localSortByBookmarks(illusts: MutableList<Illust>): MutableList<Illust> {
+        val exclude = SearchFilterStore.excludeTags()
+        if (exclude.isNotEmpty()) {
+            illusts.removeAll { illust ->
+                illust.tags.any { tag -> exclude.any { it.equals(tag.name, true) } }
+            }
+        }
         if (sort.value == 2) illusts.sortByDescending { it.total_bookmarks }
         return illusts
     }

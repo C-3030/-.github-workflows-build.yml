@@ -20,7 +20,9 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
+import androidx.core.view.MenuItemCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
@@ -140,9 +142,22 @@ class NovelActivity : RinkActivity() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        // 收藏态用图标透明度区分(仅有一枚心形图标)
-        menu.findItem(R.id.action_novel_bookmark).icon?.alpha =
-            if (viewModel.bookmarked.value == true) 255 else 90
+        // 收藏态:未收藏=描边心(工具栏默认色),已收藏=实心红心
+        val marked = viewModel.bookmarked.value == true
+        menu.findItem(R.id.action_novel_bookmark)?.let { item ->
+            if (marked) {
+                item.icon = ContextCompat.getDrawable(this, R.drawable.ic_love)
+                MenuItemCompat.setIconTintList(item, null)
+            } else {
+                item.icon = ContextCompat.getDrawable(this, R.drawable.ic_love_outline)
+                val normal = com.google.android.material.color.MaterialColors.getColor(
+                    binding.toolbar, android.R.attr.colorControlNormal
+                )
+                MenuItemCompat.setIconTintList(
+                    item, android.content.res.ColorStateList.valueOf(normal)
+                )
+            }
+        }
         menu.findItem(R.id.action_novel_prev).isVisible = prev != null
         menu.findItem(R.id.action_novel_next).isVisible = next != null
         return super.onPrepareOptionsMenu(menu)

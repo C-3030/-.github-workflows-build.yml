@@ -28,6 +28,7 @@ package com.perol.asdpl.pixivez.ui.search
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -64,10 +65,20 @@ class SearchActivity : RinkActivity() {
     lateinit var trendTagFragment: TrendTagFragment
     lateinit var searchSuggestionViewModel: SearchSuggestionViewModel
     lateinit var trendTagViewModel: TrendTagViewModel
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_search_filter, menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
                 onBackPressedCallback.handleOnBackPressed()
+                return true
+            }
+
+            R.id.action_search_filter -> {
+                SearchFilterDialog.show(supportFragmentManager)
                 return true
             }
         }
