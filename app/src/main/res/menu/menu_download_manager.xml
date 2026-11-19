@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_settings"
-        android:icon="@drawable/ic_settings"
+        android:icon="@drawable/ic_nv_settings"
         app:iconTint="?android:colorControlNormal"
         android:title="@string/task_setting"
         app:showAsAction ="ifRoom" />

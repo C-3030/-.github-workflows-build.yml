@@ -44,8 +44,10 @@ import com.perol.asdpl.pixivez.ui.MainActivity
 import com.perol.asdpl.pixivez.ui.WebViewActivity
 import com.perol.asdpl.pixivez.ui.pic.PictureActivity
 import com.perol.asdpl.pixivez.ui.user.UserMActivity
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import retrofit2.HttpException
 import java.io.IOException
 
@@ -177,48 +179,71 @@ class IntentActivity : RinkActivity() {
     }
 
     private fun tryLogin(code: String) {
-        val oAuthSecureService =
-            RestClient.retrofitOauthSecureDirect.create(OAuthSecureService::class.java)
         Toasty.warning(PxEZApp.instance, R.string.try_to_login)
-        try {
-            runBlocking(Dispatchers.IO) {
-                oAuthSecureService.postAuthTokenX(code, Pkce.getPkce().verify).let {
-                    val user = it.user.toUserEntity(it.refresh_token, it.access_token)
-                    AppDataRepo.insertUser(user)
+        // 换 token 是网络请求,绝不能占着主线程。以前用 runBlocking 直接在当前线程阻塞,
+        // 弱网 / 需要绕路时主线程被卡住,系统直接报 ANR,用户看到的是"登录卡死"。
+        // 改为应用级 scope(本页可以马上结束),成功后再跳主页。
+        PxEZApp.instance.applicationScope.launch {
+            try {
+                val ok = withTimeoutOrNull(30_000L) {
+                    val oAuthSecureService =
+                        RestClient.retrofitOauthSecureDirect.create(OAuthSecureService::class.java)
+                    oAuthSecureService.postAuthTokenX(code, Pkce.getPkce().verify).let {
+                        val user = it.user.toUserEntity(it.refresh_token, it.access_token)
+                        AppDataRepo.insertUser(user)
+                    }
+                    true
                 }
+                if (ok != true) {
+                    withContext(Dispatchers.Main) {
+                        Toasty.error(
+                            PxEZApp.instance,
+                            PxEZApp.instance.getString(R.string.error_unknown) + "\n" +
+                                PxEZApp.instance.getString(R.string.refresh_token_fail)
+                        )
+                    }
+                    return@launch
+                }
+                val intent = Intent(PxEZApp.instance, MainActivity::class.java)
+                    .setAction("login.success").apply {
+                        // 避免循环添加账号导致相同页面嵌套。或者在添加账号（登录）成功时回到账号列表页面而不是导航至新的主页
+                        flags =
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
+                        // Or launchMode = "singleTop|singleTask"
+                    }
+                withContext(Dispatchers.Main) {
+                    Toasty.success(PxEZApp.instance, R.string.login_success)
+                    PxEZApp.instance.startActivity(intent)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { reportLoginError(e) }
             }
-            Toasty.success(PxEZApp.instance, R.string.login_success)
-            val intent = Intent(this@IntentActivity, MainActivity::class.java)
-                .setAction("login.success").apply {
-                    // 避免循环添加账号导致相同页面嵌套。或者在添加账号（登录）成功时回到账号列表页面而不是导航至新的主页
-                    flags =
-                        Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
-                    // Or launchMode = "singleTop|singleTask"
-                }
-            startActivity(intent)
-        } catch (e: Exception) {
-            if (e is HttpException) {
-                try {
-                    val errorBody = e.response()?.errorBody()?.string()!!
-                    val errorResponse = gson.decodeFromString<ErrorResponse>(errorBody)
-                    var errMsg = "${e.message}\n${errorResponse.errors.system.message}"
-                    CrashHandler.instance.e(className, errMsg)
-                    errMsg =
-                        if (errorResponse.has_error && errorResponse.errors.system.message.contains(
-                                Regex(""".*103:.*""")
-                            )
-                        ) {
-                            getString(R.string.error_invalid_account_password)
-                        } else {
-                            getString(R.string.error_unknown) + "\n" + errMsg
-                        }
-                    Toasty.error(PxEZApp.instance, errMsg)
-                } catch (e1: IOException) {
-                    Toasty.error(PxEZApp.instance, e.message.toString())
-                }
-            } else {
-                Toasty.error(applicationContext, "${e.message}")
+        }
+    }
+
+    // 只在主线程调用:Toasty 内部直接 makeText/show。
+    private fun reportLoginError(e: Exception) {
+        if (e is HttpException) {
+            try {
+                val errorBody = e.response()?.errorBody()?.string() ?: ""
+                val errorResponse = gson.decodeFromString<ErrorResponse>(errorBody)
+                var errMsg = "${e.message}\n${errorResponse.errors.system.message}"
+                CrashHandler.instance.e(className, errMsg)
+                errMsg =
+                    if (errorResponse.has_error && errorResponse.errors.system.message.contains(
+                            Regex(""".*103:.*""")
+                        )
+                    ) {
+                        getString(R.string.error_invalid_account_password)
+                    } else {
+                        getString(R.string.error_unknown) + "\n" + errMsg
+                    }
+                Toasty.error(PxEZApp.instance, errMsg)
+            } catch (e1: IOException) {
+                Toasty.error(PxEZApp.instance, e.message.toString())
             }
+        } else {
+            Toasty.error(applicationContext, "${e.message}")
         }
     }
 }

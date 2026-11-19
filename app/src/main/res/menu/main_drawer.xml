@@ -6,50 +6,50 @@
     <group android:checkableBehavior="none">
         <item
             android:id="@+id/nav_multi_download"
-            android:icon="@drawable/ic_action_download"
+            android:icon="@drawable/ic_nv_download"
             android:title="多选下载" />
         <item
             android:id="@+id/nav_edit_nav"
-            android:icon="@drawable/ic_action_expand"
+            android:icon="@drawable/ic_nv_expand"
             android:title="编辑导航栏" />
         <item
             android:id="@+id/nav_following"
-            android:icon="@drawable/ic_action_user"
+            android:icon="@drawable/ic_nv_person"
             android:title="关注用户" />
         <item
             android:id="@+id/nav_follower"
-            android:icon="@drawable/ic_action_user"
+            android:icon="@drawable/ic_nv_person"
             android:title="我的粉丝" />
         <item
             android:id="@+id/nav_account"
-            android:icon="@drawable/ic_action_user"
+            android:icon="@drawable/ic_nv_person"
             android:title="@string/account_management" />
         <item
             android:id="@+id/nav_gallery"
-            android:icon="@drawable/ic_star"
+            android:icon="@drawable/ic_nv_star"
             android:title="@string/walk_through" />
         <item
             android:id="@+id/nav_browser"
-            android:icon="@drawable/ic_action_search"
+            android:icon="@drawable/ic_nv_search"
             android:title="@string/browser" />
         <item
             android:id="@+id/nav_novel_mode"
-            android:icon="@drawable/ic_sync"
+            android:icon="@drawable/ic_nv_sync"
             android:title="@string/switch_to_novel" />
         <item
             android:id="@+id/nav_search_pic"
-            android:icon="@drawable/ic_gallery"
+            android:icon="@drawable/ic_nv_gallery"
             android:title="@string/searchsource" />
         <item
             android:id="@+id/nav_history"
-            android:icon="@drawable/ic_action_history"
+            android:icon="@drawable/ic_nv_history"
             android:title="@string/view_history" />
         <item
             android:id="@+id/nav_progress"
-            android:icon="@drawable/ic_action_download"
+            android:icon="@drawable/ic_nv_download"
             android:title="@string/download_progress" />
         <item
-            android:icon="@drawable/ic_action_theme"
+            android:icon="@drawable/ic_nv_theme"
             android:title="@string/theme"
             android:id="@+id/nav_theme"/>
         <item
@@ -61,19 +61,19 @@
     <group android:id="@+id/config_menu">
         <item
             android:id="@+id/nav_rename"
-            android:icon="@drawable/ic_action_folder"
+            android:icon="@drawable/ic_nv_folder"
             android:title="@string/img_manager" />
         <item
             android:id="@+id/nav_blocklist"
             android:title="@string/block_tag"
-            android:icon="@drawable/ic_action_block" />
+            android:icon="@drawable/ic_nv_block" />
         <item
             android:id="@+id/nav_cache_repo"
-            android:icon="@drawable/ic_star"
+            android:icon="@drawable/ic_nv_star"
             android:title="@string/view_cache_repo" />
         <item
             android:id="@+id/nav_cache_clean"
-            android:icon="@drawable/ic_action_del"
+            android:icon="@drawable/ic_nv_delete"
             android:title="@string/clear_cache" />
     </group>
 

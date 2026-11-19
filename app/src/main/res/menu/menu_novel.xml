@@ -35,7 +35,7 @@
         app:showAsAction="never" />
     <item
         android:id="@+id/action_novel_share"
-        android:icon="@drawable/ic_action_share"
+        android:icon="@drawable/ic_nv_share"
         android:title="@string/share"
         app:iconTint="?android:colorControlNormal"
         app:showAsAction="never" />
