@@ -74,6 +74,11 @@
             app:key="AutoLoadRelatedIllust"
             app:defaultValue="true"
             app:title="@string/auto_load_related_illust" />
+        <SwitchPreferenceCompat
+            app:key="never_tip"
+            app:defaultValue="false"
+            app:summary="@string/never_tip_summary"
+            app:title="@string/never_tip" />
     </PreferenceCategory>
     <PreferenceCategory app:title="Selection">
         <Preference

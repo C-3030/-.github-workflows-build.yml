@@ -34,11 +34,19 @@ object SearchFilterStore {
 
     fun isEmpty(): Boolean = includeTags().isEmpty() && excludeTags().isEmpty()
 
-    /** 把包含标签拼到搜索词后面;pixiv 用空格分隔多个词做 AND 搜索 */
+    /** 把包含标签拼到搜索词后面;pixiv 用空格分隔多个词做 AND 搜索。
+     *  中文别名(如"虐杀")会换成组内真正的标签(「リョナ」)再搜。 */
     fun applyIncludes(word: String): String {
-        val includes = includeTags()
+        val includes = includeTags().map { TagAliases.searchTag(it) }.distinct()
         if (includes.isEmpty()) return word
         return (listOf(word.trim()) + includes).filter { it.isNotEmpty() }.joinToString(" ")
+    }
+
+    /** 某个作品标签是否被"排除标签"命中(整组别名都算) */
+    fun isExcluded(tagName: String): Boolean {
+        val excluded = excludeTags()
+        if (excluded.isEmpty()) return false
+        return excluded.any { entry -> TagAliases.expand(entry).any { it.equals(tagName, true) } }
     }
 
     fun summary(): String {

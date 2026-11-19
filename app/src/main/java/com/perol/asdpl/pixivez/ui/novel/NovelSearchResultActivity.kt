@@ -77,6 +77,11 @@ class NovelSearchResultActivity : RinkActivity() {
                 return true
             }
 
+            R.id.action_tag_favorites -> {
+                com.perol.asdpl.pixivez.ui.search.TagFavoriteDialog.show(supportFragmentManager)
+                return true
+            }
+
             R.id.action_search_filter -> {
                 com.perol.asdpl.pixivez.ui.search.SearchFilterDialog.show(supportFragmentManager)
                 return true

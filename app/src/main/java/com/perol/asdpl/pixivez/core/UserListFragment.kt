@@ -48,6 +48,7 @@ import com.perol.asdpl.pixivez.data.FollowGroupStore
 import com.perol.asdpl.pixivez.data.model.UserPreviewsBean
 import com.perol.asdpl.pixivez.databinding.FragmentListBinding
 import com.perol.asdpl.pixivez.databinding.ViewUserGroupBarBinding
+import com.perol.asdpl.pixivez.databinding.ViewUserWorksSwitchBinding
 import com.perol.asdpl.pixivez.databinding.ViewRestrictButtonBinding
 import com.perol.asdpl.pixivez.objects.InteractionUtil.visRestrictTag
 import com.perol.asdpl.pixivez.objects.Toasty
@@ -97,6 +98,7 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
     private val selected = LinkedHashSet<Int>()
     private var fullData: MutableList<UserPreviewsBean> = mutableListOf()
     private var _groupBar: ViewUserGroupBarBinding? = null
+    private var _worksSwitch: ViewUserWorksSwitchBinding? = null
     private val groupBar: ViewUserGroupBarBinding?
         get() = _groupBar
 
@@ -213,6 +215,7 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
     override fun onDestroy() {
         _bindingHeader = null
         _groupBar = null
+        _worksSwitch = null
         super.onDestroy()
     }
 

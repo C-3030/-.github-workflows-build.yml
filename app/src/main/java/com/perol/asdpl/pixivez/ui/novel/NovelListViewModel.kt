@@ -76,10 +76,11 @@ class NovelListViewModel : BaseViewModel() {
     // 搜索时应用筛选的排除标签;字数排序在本地做
     private fun transform(novels: MutableList<Novel>): MutableList<Novel> {
         if (tag == NOVEL_TAG.Search) {
-            val exclude = com.perol.asdpl.pixivez.data.SearchFilterStore.excludeTags()
-            if (exclude.isNotEmpty()) {
+            if (com.perol.asdpl.pixivez.data.SearchFilterStore.excludeTags().isNotEmpty()) {
                 novels.removeAll { novel ->
-                    novel.tags.any { tag -> exclude.any { it.equals(tag.name, true) } }
+                    novel.tags.any { tag ->
+                        com.perol.asdpl.pixivez.data.SearchFilterStore.isExcluded(tag.name)
+                    }
                 }
             }
             if (args["sort"] == "length_desc") novels.sortByDescending { it.text_length }

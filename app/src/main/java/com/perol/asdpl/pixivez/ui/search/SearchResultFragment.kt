@@ -172,10 +172,9 @@ class SearchResultViewModel : PicListViewModel() {
     //TODO: UI标识
     // 排除标签:pixiv 没有反选语法,命中排除标签的作品在本地丢弃
     private fun localSortByBookmarks(illusts: MutableList<Illust>): MutableList<Illust> {
-        val exclude = SearchFilterStore.excludeTags()
-        if (exclude.isNotEmpty()) {
+        if (SearchFilterStore.excludeTags().isNotEmpty()) {
             illusts.removeAll { illust ->
-                illust.tags.any { tag -> exclude.any { it.equals(tag.name, true) } }
+                illust.tags.any { tag -> SearchFilterStore.isExcluded(tag.name) }
             }
         }
         if (sort.value == 2) illusts.sortByDescending { it.total_bookmarks }

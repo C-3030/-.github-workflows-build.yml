@@ -278,7 +278,8 @@ class PictureXAdapter(
                         setTextColor(Color.RED)
                     }
                     setOnClickListener {
-                        SearchActivity.start(mContext, tag.name)
+                        // 搜索 or 收藏,由弹窗决定
+                        com.perol.asdpl.pixivez.ui.search.TagActions.show(mContext, tag.name)
                     }
                     setOnLongClickListener {
                         showBlockTagDialog(mContext, tag)

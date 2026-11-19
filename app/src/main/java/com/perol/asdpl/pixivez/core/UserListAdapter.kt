@@ -47,6 +47,7 @@ import com.perol.asdpl.pixivez.objects.DataHolder
 import com.perol.asdpl.pixivez.objects.ThemeUtil
 import com.perol.asdpl.pixivez.objects.dp
 import com.perol.asdpl.pixivez.services.PxEZApp
+import com.perol.asdpl.pixivez.ui.pic.NovelCoverAdapter
 import com.perol.asdpl.pixivez.ui.pic.PictureActivity
 import com.perol.asdpl.pixivez.ui.pic.SquareMediumAdapter
 import com.perol.asdpl.pixivez.ui.user.UserMActivity
@@ -83,6 +84,14 @@ class UserListAdapter(layoutResId: Int) :
     var onSelectionToggle: ((UserPreviewsBean) -> Unit)? = null
     var onSelectionStart: ((UserPreviewsBean) -> Unit)? = null
 
+    // 卡片下方展示的作品类型:false=插画漫画,true=小说(只给封面)
+    var novelStrip = false
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+    private val novelPool = RecyclerView.RecycledViewPool()
+
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
         colorPrimary = ThemeUtil.getColorPrimary(context)
@@ -115,6 +124,33 @@ class UserListAdapter(layoutResId: Int) :
             }
         }
     }
+    // 只放封面,没有标题等文字
+    private fun bindNovelStrip(recyclerview: RecyclerView, item: UserPreviewsBean) {
+        if (item.novels.isEmpty()) {
+            recyclerview.visibility = View.GONE
+            return
+        }
+        recyclerview.visibility = View.VISIBLE
+        val adapter = recyclerview.adapter as? NovelCoverAdapter
+        if (adapter == null) {
+            val novelAdapter = NovelCoverAdapter(R.layout.view_user_illust_item)
+            recyclerview.apply {
+                this.adapter = novelAdapter
+                layoutManager = LinearLayoutManager(
+                    context,
+                    LinearLayoutManager.HORIZONTAL,
+                    false
+                )
+                setRecycledViewPool(novelPool)
+                setHasFixedSize(true)
+                isNestedScrollingEnabled = false
+            }
+            novelAdapter.setNewInstance(item.novels)
+        } else {
+            adapter.setNewInstance(item.novels)
+        }
+    }
+
     @SuppressLint("SetTextI18n")
     override fun convert(holder: BaseViewHolder, item: UserPreviewsBean) {
         if (item.user.is_blocked == true) {
@@ -130,6 +166,10 @@ class UserListAdapter(layoutResId: Int) :
             if (selected) strokeColor = colorPrimary
         }
         val recyclerview = holder.getView<RecyclerView>(R.id.recyclerview_usershow)
+        if (novelStrip) {
+            bindNovelStrip(recyclerview, item)
+            return
+        }
         if (item.illusts.isNotEmpty()) {
             val userShowIllustAdapter: SquareMediumAdapter
             if (recyclerview.adapter == null) {

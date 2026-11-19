@@ -78,6 +78,11 @@ class SearchActivity : RinkActivity() {
                 return true
             }
 
+            R.id.action_tag_favorites -> {
+                TagFavoriteDialog.show(supportFragmentManager)
+                return true
+            }
+
             R.id.action_search_filter -> {
                 SearchFilterDialog.show(supportFragmentManager)
                 return true
@@ -164,10 +169,11 @@ class SearchActivity : RinkActivity() {
                     when (binding.tablayoutSearch.selectedTabPosition) {
                         0 -> {
                             trendTagViewModel.addHistory(query)
+                            // 选什么就搜什么,不再看首页是不是小说模式
                             if (binding.searchTypeNovel.isChecked) {
                                 NovelSearchResultActivity.start(this@SearchActivity, query)
                             } else {
-                                searchFor(query)
+                                searchIllust(query)
                             }
                         }
 
@@ -224,7 +230,14 @@ class SearchActivity : RinkActivity() {
         super.onSaveInstanceState(outState)
     }
 
-    private fun searchFor(query: String) {
-        SearchRouter.startWordSearch(this, query)
+    // 插画(含漫画)结果:直接开结果页,绕开 SearchRouter 的 main_mode 分派
+    private fun searchIllust(query: String) {
+        startActivityForResult(
+            Intent(this, SearchResultActivity::class.java)
+                .setAction("search.result")
+                .putExtra("keyword", query)
+                .putExtra("type", 0),
+            SearchRouter.REQUEST_WORD
+        )
     }
 }

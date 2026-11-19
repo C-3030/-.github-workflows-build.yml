@@ -177,6 +177,8 @@ class SupportDialog : BaseDialogFragment<DialogEmptyListBinding>() {
         }
 
         fun checkTime(supportFragmentManager: FragmentManager): Boolean {
+            // 设置里可以彻底关掉这个支持提示(不改动对话框本身,作者入口仍在 关于/致谢 里)
+            if (AppDataRepo.pre.getBoolean("never_tip", false)) return true
             val time: Long = System.currentTimeMillis()
             return if (BuildConfig.FLAVOR == "git" &&
                 TimeUnit.MILLISECONDS.toDays(
