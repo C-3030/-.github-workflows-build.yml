@@ -53,6 +53,18 @@ class HistoryViewModel : BaseViewModel() {
         }
     }
 
+    fun deleteItem(item: HistoryEntity, after: () -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            historyDatabase.viewHistoryDao().delete(item)
+            withContext(Dispatchers.Main) {
+                history.value = history.value
+                    ?.filterNot { it.id == item.id && it.isUser == item.isUser && it.isNovel == item.isNovel }
+                    ?.toMutableList()
+                after()
+            }
+        }
+    }
+
     fun deleteSelect(i: Int, after: () -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             historyDatabase.viewHistoryDao().delete(history.value!![i])

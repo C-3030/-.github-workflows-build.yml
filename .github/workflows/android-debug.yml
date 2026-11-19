@@ -67,16 +67,29 @@ jobs:
 
       # debug 构建类型对所有 flavor 强制使用名为 "config" 的签名,
       # 且 app/build.gradle.kts 在配置期就会读取 rootProject 的 keystore.properties。
-      # 此处生成一次性测试 keystore(零密钥即可出包)。
-      # 注意:每次运行密钥不同 → 签名不一致,覆盖安装前需先卸载旧版。
-      #       若需跨次升级安装,改用下方 secrets 方案(见末尾说明)。
-      - name: Generate throwaway signing keystore
+      #
+      # 签名固定方案:keystore 存在 Actions 缓存里,只在第一次运行时生成,之后一直复用。
+      # 这样多次构建签名一致,可以直接覆盖安装(不需要卸载)。
+      # 缓存只有本仓库的 workflow 能读取,所以不把私钥提交进公开仓库;
+      # 注意 GitHub 会清理 7 天未使用的缓存,长期不构建后缓存丢失会重新生成新密钥。
+      - name: Restore signing keystore from cache
+        id: keystore-cache
+        uses: actions/cache@v4
+        with:
+          path: ci-debug.keystore
+          key: pixez-debug-keystore-v1
+
+      - name: Generate signing keystore if missing
+        if: steps.keystore-cache.outputs.cache-hit != 'true'
         run: |
           keytool -genkeypair -v \
             -keystore "$GITHUB_WORKSPACE/ci-debug.keystore" \
             -alias ci -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass cicicici -keypass cicicici \
             -dname "CN=PixEz CI, OU=CI, O=PixEz, L=NA, ST=NA, C=US"
+
+      - name: Write keystore.properties
+        run: |
           cat > "$GITHUB_WORKSPACE/keystore.properties" <<EOF
           storeFile=$GITHUB_WORKSPACE/ci-debug.keystore
           storePassword=cicicici

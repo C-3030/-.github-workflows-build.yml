@@ -251,14 +251,22 @@ class NovelActivity : RinkActivity() {
     // 记入"浏览历史"(与插画同表,isNovel 区分);同一篇累加次数
     private fun recordHistory(novel: Novel) {
         val db = HistoryDatabase.getInstance(PxEZApp.instance)
-        val thumb = novel.image_urls.square_medium
+        val thumb = novel.image_urls.medium
         CoroutineScope(Dispatchers.IO).launch {
             val exist = db.viewHistoryDao().getEntity(novel.id, false, true)
             if (exist != null) {
                 db.viewHistoryDao().increment(exist)
             } else {
                 db.viewHistoryDao().insert(
-                    HistoryEntity(novel.id, novel.title, thumb, false, true)
+                    HistoryEntity(
+                        id = novel.id,
+                        title = novel.title,
+                        thumb = thumb,
+                        isUser = false,
+                        isNovel = true,
+                        author = novel.user.name,
+                        meta = "${novel.text_length} · ♥ ${novel.total_bookmarks}"
+                    )
                 )
             }
         }

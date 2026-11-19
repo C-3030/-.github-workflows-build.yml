@@ -64,7 +64,12 @@ class HistoryEntity(
     var count: Int = 1,
     //@ColumnInfo(defaultValue = "CURRENT_TIMESTAMP")
     val createdAt: Long = System.currentTimeMillis(),
-    var modifiedAt: Long = System.currentTimeMillis()
+    var modifiedAt: Long = System.currentTimeMillis(),
+    // 小说卡片要显示作者和字数/收藏数,插画/用户记录留空
+    @ColumnInfo(defaultValue = "''")
+    val author: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val meta: String = ""
 )
 /*class IncreCount(
     var count: Int = 1,

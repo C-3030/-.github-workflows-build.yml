@@ -40,11 +40,15 @@ class HistoryAdapter :
         val imageView = holder.getView<ImageView>(R.id.item_img)
         Glide.with(imageView.context).load(item.thumb)
             .placeholder(ThemeUtil.HALF_TRANS.toDrawable()).into(imageView)
-        holder.setText(R.id.title, item.title)
-        holder.setTextColor(
-            R.id.title,
-            if (item.isUser || item.isNovel) ThemeUtil.getColorHighlight(context)
-            else ThemeUtil.getTextColorPrimary(context)
-        )
+        // 插画记录只放图,不带文字;用户/小说记录才显示标题
+        val label = holder.getView<android.widget.TextView>(R.id.title)
+        if (item.isUser || item.isNovel) {
+            label.visibility = android.view.View.VISIBLE
+            label.text = item.title
+            label.setTextColor(ThemeUtil.getColorHighlight(context))
+        } else {
+            label.visibility = android.view.View.GONE
+            label.text = ""
+        }
     }
 }

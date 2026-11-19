@@ -37,7 +37,7 @@ import com.perol.asdpl.pixivez.services.PxEZApp
 
 @Database(
     entities = [SearchHistoryEntity::class, HistoryEntity::class],
-    version = 3
+    version = 4
 )
 abstract class HistoryDatabase : RoomDatabase() {
     abstract fun searchHistoryDao(): SearchHistoryDao
@@ -79,12 +79,18 @@ abstract class HistoryDatabase : RoomDatabase() {
             it.execSQL("ALTER TABLE history_new RENAME TO history")
         }
 
+        // 3 -> 4:历史补作者/字数信息,小说卡片才有内容可显示
+        private val migration3to4 = Migration(3, 4) {
+            it.execSQL("ALTER TABLE history ADD COLUMN author TEXT NOT NULL DEFAULT ''")
+            it.execSQL("ALTER TABLE history ADD COLUMN meta TEXT NOT NULL DEFAULT ''")
+        }
+
         private fun buildDatabase(context: Context) =
             Room.databaseBuilder(
                 context.applicationContext,
                 HistoryDatabase::class.java,
                 "history.db"
-            ).addMigrations(migration1to2, migration2to3)
+            ).addMigrations(migration1to2, migration2to3, migration3to4)
                 .fallbackToDestructiveMigrationOnDowngrade()
                 .build()
     }

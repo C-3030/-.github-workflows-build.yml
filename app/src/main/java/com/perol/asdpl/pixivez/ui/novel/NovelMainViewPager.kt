@@ -10,7 +10,8 @@ import com.perol.asdpl.pixivez.R
 enum class NovelPage(val title: String, val iconRes: Int) {
     Recommend("推荐", R.drawable.ic_nv_home),
     Rank("排行", R.drawable.ic_nv_rank),
-    Follow("动态", R.drawable.ic_nv_star)
+    Follow("动态", R.drawable.ic_nv_star),
+    Bookmark("收藏", R.drawable.ic_heart_outline)
 }
 
 // 小说独立模式首页三件套,与 HelloMainViewPager 三 tab 一一对应:
@@ -21,9 +22,17 @@ class NovelMainViewPager(fragmentManager: FragmentManager) :
 
     override fun getPageTitle(position: Int): CharSequence = NovelPage.entries[position].title
 
-    override fun getItem(position: Int): Fragment = when (position) {
-        0 -> NovelListFragment.newInstance(NOVEL_TAG.Recommend)
-        1 -> NovelRankFragment.newInstance()
-        else -> NovelListFragment.newInstance(NOVEL_TAG.Follow)
+    override fun getItem(position: Int): Fragment = when (NovelPage.entries[position]) {
+        NovelPage.Recommend -> NovelListFragment.newInstance(NOVEL_TAG.Recommend)
+        NovelPage.Rank -> NovelRankFragment.newInstance()
+        NovelPage.Follow -> NovelListFragment.newInstance(NOVEL_TAG.Follow)
+        NovelPage.Bookmark -> {
+            val uid = if (com.perol.asdpl.pixivez.data.AppDataRepo.userInited())
+                com.perol.asdpl.pixivez.data.AppDataRepo.currentUser.userid else 0
+            NovelListFragment.newInstance(
+                NOVEL_TAG.UserBookmark,
+                mutableMapOf("userid" to uid)
+            )
+        }
     }
 }

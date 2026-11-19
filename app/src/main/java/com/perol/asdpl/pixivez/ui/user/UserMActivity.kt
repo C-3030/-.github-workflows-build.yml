@@ -60,6 +60,7 @@ import com.perol.asdpl.pixivez.objects.Toasty
 import com.perol.asdpl.pixivez.objects.UpToTopListener
 import com.perol.asdpl.pixivez.objects.UserCacheRepo
 import com.perol.asdpl.pixivez.services.BatchDownloader
+import com.perol.asdpl.pixivez.ui.novel.NovelBatchDownloader
 import com.perol.asdpl.pixivez.services.PxEZApp
 import com.perol.asdpl.pixivez.ui.settings.BlockViewModel
 import com.perol.asdpl.pixivez.view.AppBarStateChangeListener
@@ -353,31 +354,114 @@ class UserMActivity : RinkActivity() {
     }
 
     private fun batchDownload() {
-        val options = arrayOf("全部插画", "全部漫画", "公开收藏", "私密收藏")
+        val self = AppDataRepo.isSelfPage(id)
+        val allIllust = "全部插画"
+        val allManga = "全部漫画"
+        val allNovel = getString(R.string.download_all_novel)
+        val publicBookmark = "公开收藏"
+        val privateBookmark = "私密收藏"
+        val selectDownload = getString(R.string.download_select)
+
+        // 别人的私密收藏根本拿不到,所以只有自己的页面才给这个选项
+        val options = mutableListOf(allIllust, allManga, allNovel, publicBookmark)
+        if (self) options.add(privateBookmark)
+        options.add(selectDownload)
+
         MaterialDialogs(this)
             .setTitle("批量下载")
-            .setItems(options) { _, index ->
-                lifecycleScope.launch {
-                    try {
-                        Toasty.info(this@UserMActivity, "正在获取作品列表…")
-                        val list = when (index) {
-                            0 -> BatchDownloader.fetchUserWorks(id, "illust")
-                            1 -> BatchDownloader.fetchUserWorks(id, "manga")
-                            2 -> BatchDownloader.fetchUserBookmarks(id, "public")
-                            else -> BatchDownloader.fetchUserBookmarks(id, "private")
-                        }
-                        if (list.isEmpty()) {
-                            Toasty.warning(this@UserMActivity, "没有可下载的作品")
-                        } else {
-                            BatchDownloader.download(list)
-                            Toasty.success(this@UserMActivity, "已加入下载队列：" + list.size + " 个作品")
-                        }
-                    } catch (e: Exception) {
-                        Toasty.error(this@UserMActivity, "获取失败：" + (e.message ?: ""))
+            .setItems(options.toTypedArray()) { _, index ->
+                when (val choice = options[index]) {
+                    allIllust -> fetchAndQueue { BatchDownloader.fetchUserWorks(id, "illust") }
+                    allManga -> fetchAndQueue { BatchDownloader.fetchUserWorks(id, "manga") }
+                    allNovel -> downloadAllNovels()
+                    publicBookmark -> fetchAndQueue {
+                        BatchDownloader.fetchUserBookmarks(id, "public")
                     }
+
+                    privateBookmark -> fetchAndQueue {
+                        BatchDownloader.fetchUserBookmarks(id, "private")
+                    }
+
+                    selectDownload -> showSelectDownload()
+                    else -> Unit
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    // 拉列表 → 丢进下载队列(带"正在获取"提示和失败提示)
+    private fun fetchAndQueue(fetch: suspend () -> List<com.perol.asdpl.pixivez.data.model.Illust>) {
+        lifecycleScope.launch {
+            try {
+                Toasty.info(this@UserMActivity, R.string.download_fetching)
+                val list = fetch()
+                if (list.isEmpty()) {
+                    Toasty.warning(this@UserMActivity, R.string.download_empty)
+                } else {
+                    BatchDownloader.download(list)
+                    Toasty.success(
+                        this@UserMActivity,
+                        getString(R.string.download_queued, list.size)
+                    )
+                }
+            } catch (e: Exception) {
+                Toasty.error(
+                    this@UserMActivity,
+                    getString(R.string.download_failed, e.message ?: "")
+                )
+            }
+        }
+    }
+
+    // 全部小说:逐篇导出 TXT(不是 ketch 队列,所以给进度提示)
+    private fun downloadAllNovels() {
+        lifecycleScope.launch {
+            try {
+                Toasty.info(this@UserMActivity, R.string.download_fetching)
+                val novels = NovelBatchDownloader.fetchUserNovels(id)
+                if (novels.isEmpty()) {
+                    Toasty.warning(this@UserMActivity, R.string.download_empty)
+                    return@launch
+                }
+                val done = NovelBatchDownloader.exportAll(this@UserMActivity, novels) { d, t ->
+                    runOnUiThread {
+                        Toasty.normal(
+                            this@UserMActivity,
+                            getString(R.string.novel_exporting, d, t)
+                        )
+                    }
+                }
+                Toasty.success(
+                    this@UserMActivity,
+                    getString(R.string.novel_export_done, done)
+                )
+            } catch (e: Exception) {
+                Toasty.error(
+                    this@UserMActivity,
+                    getString(R.string.download_failed, e.message ?: "")
+                )
+            }
+        }
+    }
+
+    // 选择下载:勾选 插画 / 漫画 / 小说 后再下
+    private fun showSelectDownload() {
+        val view = com.perol.asdpl.pixivez.databinding.DialogDownloadSelectBinding
+            .inflate(layoutInflater)
+        MaterialDialogs(this).show {
+            setTitle(R.string.download_select)
+            setView(view.root)
+            confirmButton { _, _ ->
+                val illust = view.checkIllust.isChecked
+                val manga = view.checkManga.isChecked
+                val novel = view.checkNovel.isChecked
+                if (!illust && !manga && !novel) return@confirmButton
+                if (illust) fetchAndQueue { BatchDownloader.fetchUserWorks(id, "illust") }
+                if (manga) fetchAndQueue { BatchDownloader.fetchUserWorks(id, "manga") }
+                if (novel) downloadAllNovels()
+            }
+            cancelButton()
+        }
     }
 }

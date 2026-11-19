@@ -31,6 +31,7 @@ import com.perol.asdpl.pixivez.services.Works
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import java.io.File
@@ -73,6 +74,7 @@ class DownloadManagerActivity : RinkActivity() {
                 binding.downloadlistrefreshlayout.isRefreshing = false
             }
         }
+        binding.progress.text = getString(R.string.fractional, 0, 0)
         setupNovelList()
         refreshList()
         lifecycleScope.launch {
@@ -307,7 +309,16 @@ class DownloadManagerActivity : RinkActivity() {
 
     private fun refreshList() {
         lifecycleScope.launch(Dispatchers.IO) {
-            downloadTaskAdapter.setList(ketch.getAllDownloads().asReversed())
+            val list = ketch.getAllDownloads().asReversed()
+            downloadTaskAdapter.setList(list)
+            // 进页面先把计数写上,别停在布局里的 "?/?" 占位
+            withContext(Dispatchers.Main) {
+                binding.progress.text = getString(
+                    R.string.fractional,
+                    list.count { it.status != Status.SUCCESS },
+                    list.size
+                )
+            }
         }
     }
 
