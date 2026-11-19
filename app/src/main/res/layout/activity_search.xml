@@ -84,6 +84,33 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         android:orientation="vertical">
 
+        <!-- 综合搜索再分插画(含漫画)/小说 -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/search_type_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/search_type_illust"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/search_type_illust" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/search_type_novel"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/search_type_novel" />
+        </com.google.android.material.chip.ChipGroup>
+
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/suggestions"
             android:layout_width="match_parent"

@@ -10,6 +10,9 @@ import com.perol.asdpl.pixivez.base.MaterialDialogs
 import com.perol.asdpl.pixivez.databinding.FragmentNovelListBinding
 import com.perol.asdpl.pixivez.objects.argument
 import com.perol.asdpl.pixivez.objects.argumentNullable
+import com.perol.asdpl.pixivez.services.Event
+import com.perol.asdpl.pixivez.services.FlowEventBus
+import kotlinx.coroutines.launch
 
 // 泛化小说列表:按 NOVEL_TAG 选数据源,next_url 上拉分页。
 // Follow / UserBookmark 顶部提供 公开/非公开 切换。
@@ -44,6 +47,14 @@ class NovelListFragment : BaseVBFragment<FragmentNovelListBinding>() {
         novelListAdapter.setOnLoadMoreListener { viewModel.onLoadMore() }
         binding.swipeRefreshLayout.setOnRefreshListener { viewModel.onLoadFirst() }
         configRestrict()
+        // 搜索页改筛选(包含/排除标签)后,本页要跟着重新搜
+        if (viewModel.tag == NOVEL_TAG.Search) {
+            androidx.lifecycle.lifecycleScope.launch {
+                FlowEventBus.observe<Event.SearchFilterChanged>(viewLifecycleOwner) {
+                    viewModel.onLoadFirst()
+                }
+            }
+        }
     }
 
     // 仅 Follow / UserBookmark 显示公开/非公开切换,照插画动态页的做法

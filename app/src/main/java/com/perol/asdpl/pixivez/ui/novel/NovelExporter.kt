@@ -70,6 +70,31 @@ object NovelExporter {
         file
     }
 
+    /** 只下封面图(小说详情接口自带的封面,原图优先) */
+    suspend fun downloadCover(novel: Novel): File = withContext(Dispatchers.IO) {
+        val url = novel.image_urls.large.ifBlank { novel.image_urls.medium }
+        val ext = extOf(url)
+        val name = buildString {
+            append(novel.title.toLegal().ifBlank { "novel" })
+            append("_").append(novel.id).append("_cover").append(ext)
+        }
+        val file = File(outputDir(), name)
+        val bytes = fetchBytes(url) ?: throw IllegalStateException("cover download failed")
+        file.writeBytes(bytes)
+        NovelDownloadStore.add(
+            NovelDownload(
+                id = novel.id,
+                title = novel.title,
+                author = novel.user.name,
+                format = "COVER",
+                path = file.absolutePath,
+                size = file.length(),
+                time = System.currentTimeMillis()
+            )
+        )
+        file
+    }
+
     // ---------------- TXT ----------------
 
     private fun writeTxt(file: File, novel: Novel, chunks: List<NovelChunk>) {

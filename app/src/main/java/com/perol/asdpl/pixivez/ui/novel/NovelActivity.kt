@@ -220,23 +220,45 @@ class NovelActivity : RinkActivity() {
             Toasty.warning(this, R.string.novel_download_empty)
             return
         }
-        val formats = arrayOf(
-            getString(R.string.novel_download_txt),
-            getString(R.string.novel_download_epub)
-        )
+        // 正文里有没有插图决定要不要给 EPUB:没插图只有纯文字,EPUB 意义不大
+        val hasImage = chunks.any { it is NovelChunk.Image && it.url != null }
+        val labels = mutableListOf(getString(R.string.novel_download_txt))
+        if (hasImage) labels.add(getString(R.string.novel_download_epub))
+        labels.add(getString(R.string.novel_download_cover))
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.novel_download)
-            .setItems(formats) { d, which ->
+            .setItems(labels.toTypedArray()) { d, which ->
                 d.dismiss()
-                val format = if (which == 1) NovelExporter.Format.EPUB else NovelExporter.Format.TXT
                 Toasty.info(this, R.string.novel_download_running)
                 lifecycleScope.launch {
                     try {
-                        val file = NovelExporter.export(this@NovelActivity, novel, chunks, format)
-                        Toasty.success(
-                            this@NovelActivity,
-                            getString(R.string.novel_download_done, file.absolutePath)
-                        )
+                        when {
+                            which == 0 -> {
+                                val f = NovelExporter.export(
+                                    this@NovelActivity, novel, chunks, NovelExporter.Format.TXT
+                                )
+                                Toasty.success(
+                                    this@NovelActivity,
+                                    getString(R.string.novel_download_done, f.absolutePath)
+                                )
+                            }
+                            hasImage && which == 1 -> {
+                                val f = NovelExporter.export(
+                                    this@NovelActivity, novel, chunks, NovelExporter.Format.EPUB
+                                )
+                                Toasty.success(
+                                    this@NovelActivity,
+                                    getString(R.string.novel_download_done, f.absolutePath)
+                                )
+                            }
+                            else -> {
+                                val f = NovelExporter.downloadCover(novel)
+                                Toasty.success(
+                                    this@NovelActivity,
+                                    getString(R.string.novel_download_done, f.absolutePath)
+                                )
+                            }
+                        }
                     } catch (e: Exception) {
                         CrashHandler.instance.e("novel", "export failed", e)
                         Toasty.error(

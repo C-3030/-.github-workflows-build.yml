@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小说搜索结果页:筛选(包含/排除标签) + 排序 -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_search_filter"
+        android:icon="@drawable/ic_nv_filter"
+        android:title="@string/search_filter"
+        app:iconTint="?android:colorControlNormal"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_novel_sort"
+        android:icon="@drawable/ic_nv_expand"
+        android:title="@string/search_sort"
+        app:iconTint="?android:colorControlNormal"
+        app:showAsAction="ifRoom" />
+</menu>

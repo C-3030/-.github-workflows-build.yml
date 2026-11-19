@@ -43,6 +43,7 @@ import com.perol.asdpl.pixivez.base.RinkActivity
 import com.perol.asdpl.pixivez.databinding.ActivitySearchBinding
 import com.perol.asdpl.pixivez.services.PxEZApp
 import com.perol.asdpl.pixivez.ui.novel.NovelActivity
+import com.perol.asdpl.pixivez.ui.novel.NovelSearchResultActivity
 import com.perol.asdpl.pixivez.ui.pic.PictureActivity
 import com.perol.asdpl.pixivez.ui.user.UserMActivity
 
@@ -148,6 +149,9 @@ class SearchActivity : RinkActivity() {
                     } else {
                         binding.searchviewText.inputType = EditorInfo.TYPE_CLASS_NUMBER
                     }
+                    // 只有"综合"需要选插画/小说;ID 搜索不需要
+                    binding.searchTypeGroup.visibility =
+                        if (tab.position == 0) View.VISIBLE else View.GONE
                 }
             }
 
@@ -160,7 +164,11 @@ class SearchActivity : RinkActivity() {
                     when (binding.tablayoutSearch.selectedTabPosition) {
                         0 -> {
                             trendTagViewModel.addHistory(query)
-                            searchFor(query)
+                            if (binding.searchTypeNovel.isChecked) {
+                                NovelSearchResultActivity.start(this@SearchActivity, query)
+                            } else {
+                                searchFor(query)
+                            }
                         }
 
                         1 -> {
@@ -198,6 +206,9 @@ class SearchActivity : RinkActivity() {
             }
         })
 
+        // 综合搜索默认跟随首页模式
+        if (novelMode) binding.searchTypeNovel.isChecked = true
+        else binding.searchTypeIllust.isChecked = true
         intent.extras?.getString("keyword")?.let {
             binding.searchviewText.setQuery(it, true)
         }

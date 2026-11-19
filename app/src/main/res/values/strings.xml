@@ -78,7 +78,7 @@
     <string name="bookmark">收藏</string>
     <string name="view_comment">查看评论</string>
     <string name="related">相关推荐</string>
-    <string name="illustid">插画ID</string>
+    <string name="illustid">作品ID</string>
     <string name="searchhistory">搜索历史（长按删除）</string>
     <string name="clearhistory">清空历史</string>
     <string name="hottags">热门标签（长按试试~）</string>
@@ -91,7 +91,7 @@
     <string name="search_by">搜索筛选</string>
     <string name="search">搜索</string>
     <string name="same_as_tag">与标签一致</string>
-    <string name="painterid">画师ID</string>
+    <string name="painterid">用户ID</string>
     <string name="word">综合</string>
     <string name="goodpfriend">好P友</string>
     <string name="ta">ta的介绍</string>
@@ -381,6 +381,7 @@
     <string name="novel_download">下载小说</string>
     <string name="novel_download_txt">TXT(纯文字)</string>
     <string name="novel_download_epub">EPUB(含插图)</string>
+    <string name="novel_download_cover">封面图片</string>
     <string name="novel_download_empty">正文还没加载好</string>
     <string name="novel_download_running">正在导出…</string>
     <string name="novel_download_done">已保存到 %1$s</string>
@@ -402,6 +403,13 @@
     <string name="cancel">取消</string>
     <string name="search_filter">筛选</string>
     <string name="history_illust">插画</string>
+    <string name="search_type_illust">插画</string>
+    <string name="search_type_novel">小说</string>
+    <string name="search_sort">排序</string>
+    <string name="search_sort_date_desc">发布时间(新→旧)</string>
+    <string name="search_sort_date_asc">发布时间(旧→新)</string>
+    <string name="search_sort_popular">收藏量</string>
+    <string name="search_sort_length">字数(小说)</string>
     <string name="download_type_illust">插画</string>
     <string name="download_type_manga">漫画</string>
     <string name="download_type_novel">小说(导出 TXT)</string>
@@ -416,6 +424,9 @@
     <string name="private_bookmark_self_only">只能看自己的私密收藏</string>
     <string name="history_novel">小说</string>
     <string name="search_filter_hint">包含标签会拼进搜索词(全部命中),排除标签会在结果里自动隐藏命中作品。</string>
+    <string name="search_filter_presets">常用标签(点一下选加入包含/排除)</string>
+    <string name="search_filter_add_to_include">加入包含</string>
+    <string name="search_filter_add_to_exclude">加入排除</string>
     <string name="search_filter_include">要包含的标签</string>
     <string name="search_filter_exclude">要排除的标签</string>
     <string name="search_filter_add_include">添加包含标签(输入会自动补全)</string>

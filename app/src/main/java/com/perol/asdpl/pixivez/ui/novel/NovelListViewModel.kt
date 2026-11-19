@@ -52,8 +52,9 @@ class NovelListViewModel : BaseViewModel() {
         NOVEL_TAG.Search -> {
             {
                 retrofit.api.getSearchNovel(
-                    args["keyword"] as String,
-                    args["sort"] as? String ?: "date_desc",
+                    com.perol.asdpl.pixivez.data.SearchFilterStore
+                        .applyIncludes(args["keyword"] as String),
+                    serverSort(),
                     args["search_target"] as? String ?: "partial_match_for_tags",
                     args["start_date"] as? String,
                     args["end_date"] as? String,
@@ -64,14 +65,41 @@ class NovelListViewModel : BaseViewModel() {
         }
     }
 
+    // 字数排序是本地排序,pixiv 没有这个 sort 值,先按时间拉再重排
+    private fun serverSort(): String =
+        when (val sort = args["sort"] as? String) {
+            null -> "date_desc"
+            "length_desc" -> "date_desc"
+            else -> sort
+        }
+
+    // 搜索时应用筛选的排除标签;字数排序在本地做
+    private fun transform(novels: MutableList<Novel>): MutableList<Novel> {
+        if (tag == NOVEL_TAG.Search) {
+            val exclude = com.perol.asdpl.pixivez.data.SearchFilterStore.excludeTags()
+            if (exclude.isNotEmpty()) {
+                novels.removeAll { novel ->
+                    novel.tags.any { tag -> exclude.any { it.equals(tag.name, true) } }
+                }
+            }
+            if (args["sort"] == "length_desc") novels.sortByDescending { it.text_length }
+        }
+        return novels
+    }
+
     fun onLoadFirst() {
         isRefreshing.value = true
-        subscribeNext(loadFirstRx(), data, nextUrl) { isRefreshing.value = false }
+        subscribeNext(loadFirstRx(), data, nextUrl, ::transform) { isRefreshing.value = false }
     }
 
     fun onLoadMore() {
         if (nextUrl.value != null) {
-            subscribeNext({ retrofit.getNextNovels(nextUrl.value!!) }, dataAdded, nextUrl)
+            subscribeNext(
+                { retrofit.getNextNovels(nextUrl.value!!) },
+                dataAdded,
+                nextUrl,
+                ::transform
+            )
         }
     }
 }

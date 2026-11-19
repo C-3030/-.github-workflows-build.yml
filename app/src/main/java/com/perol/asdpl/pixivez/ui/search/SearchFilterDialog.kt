@@ -46,6 +46,7 @@ class SearchFilterDialog : DialogFragment() {
         excludeChips = view.findViewById(R.id.exclude_chips)
         bindInput(view.findViewById(R.id.include_input), include, includeChips)
         bindInput(view.findViewById(R.id.exclude_input), exclude, excludeChips)
+        renderPresets(view.findViewById(R.id.preset_chips))
         renderChips(include, includeChips)
         renderChips(exclude, excludeChips)
         return MaterialAlertDialogBuilder(requireContext())
@@ -59,6 +60,35 @@ class SearchFilterDialog : DialogFragment() {
             }
             .setNegativeButton(R.string.cancel, null)
             .create()
+    }
+
+    // 常用标签:点一下选"加入包含"或"加入排除"
+    private fun renderPresets(chips: ChipGroup) {
+        chips.removeAllViews()
+        presets.forEach { preset ->
+            val chip = Chip(requireContext()).apply {
+                text = if (preset.label == preset.tag) preset.label
+                else "${preset.label}(${preset.tag})"
+                isCheckable = false
+                setOnClickListener {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("${preset.label} = ${preset.tag}")
+                        .setItems(
+                            arrayOf(
+                                getString(R.string.search_filter_add_to_include),
+                                getString(R.string.search_filter_add_to_exclude)
+                            )
+                        ) { d, which ->
+                            d.dismiss()
+                            if (which == 0) addTag(preset.tag, include, includeChips)
+                            else addTag(preset.tag, exclude, excludeChips)
+                        }
+                        .setNegativeButton(R.string.cancel, null)
+                        .show()
+                }
+            }
+            chips.addView(chip)
+        }
     }
 
     private fun commit() {
@@ -152,6 +182,23 @@ class SearchFilterDialog : DialogFragment() {
         scope.cancel()
         super.onDestroyView()
     }
+
+    // pixiv 上真实存在的标签名(中文只是给按钮看的说明)
+    private data class Preset(val label: String, val tag: String)
+
+    private val presets = listOf(
+        Preset("百合", "百合"),
+        Preset("R-18", "R-18"),
+        Preset("R-18G", "R-18G"),
+        Preset("扶她", "ふたなり"),
+        Preset("伪娘", "男の娘"),
+        Preset("虐杀", "リョナ"),
+        Preset("重口", "グロ"),
+        Preset("NTR", "NTR"),
+        Preset("母女", "親子"),
+        Preset("萝莉", "ロリ"),
+        Preset("巨乳", "巨乳")
+    )
 
     companion object {
         private const val TAG = "SearchFilterDialog"
