@@ -63,24 +63,20 @@ abstract class HistoryDatabase : RoomDatabase() {
         // 所以 isNovel 也要进主键,SQLite 不支持改主键,只能重建表。
         private val migration2to3 = Migration(2, 3) {
             it.execSQL(
-                "CREATE TABLE IF NOT EXISTS \`history_new\` (" +
-                    "\`id\` INTEGER NOT NULL, " +
-                    "\`title\` TEXT NOT NULL, " +
-                    "\`thumb\` TEXT NOT NULL, " +
-                    "\`isUser\` INTEGER NOT NULL DEFAULT 0, " +
-                    "\`isNovel\` INTEGER NOT NULL DEFAULT 0, " +
-                    "\`count\` INTEGER NOT NULL DEFAULT 1, " +
-                    "\`createdAt\` INTEGER NOT NULL, " +
-                    "\`modifiedAt\` INTEGER NOT NULL, " +
-                    "PRIMARY KEY(\`id\`, \`isUser\`, \`isNovel\`))"
+                "CREATE TABLE IF NOT EXISTS history_new (" +
+                    "id INTEGER NOT NULL, title TEXT NOT NULL, thumb TEXT NOT NULL, " +
+                    "isUser INTEGER NOT NULL DEFAULT 0, isNovel INTEGER NOT NULL DEFAULT 0, " +
+                    "count INTEGER NOT NULL DEFAULT 1, " +
+                    "createdAt INTEGER NOT NULL, modifiedAt INTEGER NOT NULL, " +
+                    "PRIMARY KEY(id, isUser, isNovel))"
             )
             it.execSQL(
-                "INSERT OR REPLACE INTO \`history_new\` " +
-                    "(\`id\`,\`title\`,\`thumb\`,\`isUser\`,\`isNovel\`,\`count\`,\`createdAt\`,\`modifiedAt\`) " +
-                    "SELECT \`id\`,\`title\`,\`thumb\`,\`isUser\`,0,\`count\`,\`createdAt\`,\`modifiedAt\` FROM \`history\`"
+                "INSERT OR REPLACE INTO history_new " +
+                    "(id, title, thumb, isUser, isNovel, count, createdAt, modifiedAt) " +
+                    "SELECT id, title, thumb, isUser, 0, count, createdAt, modifiedAt FROM history"
             )
-            it.execSQL("DROP TABLE \`history\`")
-            it.execSQL("ALTER TABLE \`history_new\` RENAME TO \`history\`")
+            it.execSQL("DROP TABLE history")
+            it.execSQL("ALTER TABLE history_new RENAME TO history")
         }
 
         private fun buildDatabase(context: Context) =
