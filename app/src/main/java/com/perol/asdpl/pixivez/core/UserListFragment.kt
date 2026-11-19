@@ -153,9 +153,10 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
         userListAdapter.setOnLoadMoreListener {
             viewModel.onLoadMore()
         }
-        userListAdapter.onSelectionStart = { bean -> enterSelection(bean) }
-        userListAdapter.onSelectionToggle = { bean -> toggleSelection(bean) }
         if (groupEnabled) {
+            // 只有分组可用的列表才开放多选,否则选了也无处可移
+            userListAdapter.onSelectionStart = { bean -> enterSelection(bean) }
+            userListAdapter.onSelectionToggle = { bean -> toggleSelection(bean) }
             setHasOptionsMenu(true)
             activity?.invalidateOptionsMenu()
             _groupBar = ViewUserGroupBarBinding.inflate(layoutInflater)
