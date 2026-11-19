@@ -83,8 +83,9 @@ class SearchFilterDialog : DialogFragment() {
                             )
                         ) { d, which ->
                             d.dismiss()
-                            if (which == 0) addTag(preset.tag, include, includeChips)
-                            else addTag(preset.tag, exclude, excludeChips)
+                            // 列表里显示中文(如"伪娘"),真正搜索/匹配时再展开成日文别名
+                            if (which == 0) addTag(preset.label, include, includeChips)
+                            else addTag(preset.label, exclude, excludeChips)
                         }
                         .setNegativeButton(R.string.cancel, null)
                         .show()

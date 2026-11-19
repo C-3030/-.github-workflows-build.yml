@@ -84,8 +84,10 @@ class UserListAdapter(layoutResId: Int) :
     var onSelectionToggle: ((UserPreviewsBean) -> Unit)? = null
     var onSelectionStart: ((UserPreviewsBean) -> Unit)? = null
 
-    // 卡片下方展示的作品类型:false=插画漫画,true=小说(只给封面)
-    var novelStrip = false
+    // 卡片下方展示的作品类型:全部(有插画先插画,否则小说)/ 仅插画 / 仅小说
+    enum class StripMode { ALL, ILLUST, NOVEL }
+
+    var stripMode = StripMode.ALL
         set(value) {
             field = value
             notifyDataSetChanged()
@@ -166,11 +168,22 @@ class UserListAdapter(layoutResId: Int) :
             if (selected) strokeColor = colorPrimary
         }
         val recyclerview = holder.getView<RecyclerView>(R.id.recyclerview_usershow)
-        if (novelStrip) {
+        val showIllust = stripMode != StripMode.NOVEL && item.illusts.isNotEmpty()
+        val showNovel = !showIllust &&
+            stripMode != StripMode.ILLUST && item.novels.isNotEmpty()
+        if (!showIllust && !showNovel) {
+            // 什么都没有(或当前模式没有对应作品):收成"头像 + 名字"的小卡片
+            recyclerview.visibility = View.GONE
+            holder.getViewOrNull<View>(R.id.cardview)?.let {
+                it.layoutParams = it.layoutParams.apply { height = View.WRAP_CONTENT }
+            }
+            return
+        }
+        if (showNovel) {
             bindNovelStrip(recyclerview, item)
             return
         }
-        if (item.illusts.isNotEmpty()) {
+        run {
             val userShowIllustAdapter: SquareMediumAdapter
             if (recyclerview.adapter == null) {
                 userShowIllustAdapter =
@@ -187,10 +200,19 @@ class UserListAdapter(layoutResId: Int) :
                     isNestedScrollingEnabled = false
                 }
             } else {
-                userShowIllustAdapter = recyclerview.adapter as SquareMediumAdapter
-                val itemCount = userShowIllustAdapter.data.size
-                userShowIllustAdapter.setNewInstance(item.illusts)
-                userShowIllustAdapter.notifyItemRangeChanged(0, itemCount)
+                val existing = recyclerview.adapter as? SquareMediumAdapter
+                if (existing == null) {
+                    // 之前可能是小说适配器,类型不对就重建
+                    val fresh = SquareMediumAdapter(R.layout.view_user_illust_item, item.illusts)
+                    recyclerview.adapter = fresh
+                    recyclerview.setRecycledViewPool(mSharedPool)
+                    userShowIllustAdapter = fresh
+                } else {
+                    val itemCount = existing.data.size
+                    existing.setNewInstance(item.illusts)
+                    existing.notifyItemRangeChanged(0, itemCount)
+                    userShowIllustAdapter = existing
+                }
             }
 
             userShowIllustAdapter.setOnItemClickListener { adapter, view, position ->

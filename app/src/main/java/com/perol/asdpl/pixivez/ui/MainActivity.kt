@@ -198,7 +198,7 @@ class MainActivity : RinkActivity(), NavigationView.OnNavigationItemSelectedList
                     putString("TAG", "Following")
                     putInt("userid", AppDataRepo.currentUser.userid)
                 }
-                FragmentActivity.start(this, "UserList", "关注用户", args)
+                FragmentActivity.start(this, "UserList", "关注", args)
             }
 
             R.id.nav_follower -> {

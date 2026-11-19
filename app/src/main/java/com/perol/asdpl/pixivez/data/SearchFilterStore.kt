@@ -42,11 +42,29 @@ object SearchFilterStore {
         return (listOf(word.trim()) + includes).filter { it.isNotEmpty() }.joinToString(" ")
     }
 
-    /** 某个作品标签是否被"排除标签"命中(整组别名都算) */
+    /** 长标签常用 "/" 拼接多个子标签,拆开后再比对 */
+    fun tagParts(tagName: String): List<String> =
+        tagName.split('/', '／', ',').map { it.trim() }.filter { it.isNotEmpty() }
+
+    private fun matches(entry: String, tagName: String): Boolean {
+        val parts = tagParts(tagName)
+        return TagAliases.expand(entry).any { alias ->
+            parts.any { part -> part.equals(alias, true) }
+        }
+    }
+
+    /** 某个作品标签是否被"排除标签"命中(整组别名 + / 拆分子标签都算) */
     fun isExcluded(tagName: String): Boolean {
         val excluded = excludeTags()
         if (excluded.isEmpty()) return false
-        return excluded.any { entry -> TagAliases.expand(entry).any { it.equals(tagName, true) } }
+        return excluded.any { entry -> matches(entry, tagName) }
+    }
+
+    /** 作品是否满足"包含标签"(客户端再兜一次,长标签里带子标签也能命中) */
+    fun isIncluded(tagName: String): Boolean {
+        val includes = includeTags()
+        if (includes.isEmpty()) return false
+        return includes.any { entry -> matches(entry, tagName) }
     }
 
     fun summary(): String {

@@ -85,6 +85,7 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
     // -----------------
 
     private var _header: ViewUserListHeaderBinding? = null
+    private var stripMode = UserListAdapter.StripMode.ALL
     private var _bindingHeader: ViewRestrictButtonBinding? = null
     private val bindingHeader: ViewRestrictButtonBinding
         get() = requireNotNull(_bindingHeader) { "The property of binding has been destroyed." }
@@ -133,19 +134,17 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
 
         if (viewModel.needHeader) {
             userListAdapter.addHeaderView(requireNotNull(_header) { "header missing" }.root)
-            // 右侧按钮:切换卡片里展示 插画 / 小说
-            _header!!.buttonWorksType.text = if (userListAdapter.novelStrip) {
-                getString(R.string.works_novel)
-            } else {
-                getString(R.string.works_illust)
-            }
+            // 右侧按钮轮换:全部 → 插画 → 小说 → 全部
+            renderWorksButton()
             _header!!.buttonWorksType.setOnClickListener {
-                userListAdapter.novelStrip = !userListAdapter.novelStrip
-                _header!!.buttonWorksType.text = if (userListAdapter.novelStrip) {
-                    getString(R.string.works_novel)
-                } else {
-                    getString(R.string.works_illust)
+                stripMode = when (stripMode) {
+                    UserListAdapter.StripMode.ALL -> UserListAdapter.StripMode.ILLUST
+                    UserListAdapter.StripMode.ILLUST -> UserListAdapter.StripMode.NOVEL
+                    UserListAdapter.StripMode.NOVEL -> UserListAdapter.StripMode.ALL
                 }
+                userListAdapter.stripMode = stripMode
+                renderWorksButton()
+                applyFilter()
             }
             bindingHeader.buttonPublic.isChecked = true
             bindingHeader.buttonAll.visibility = View.GONE
@@ -239,11 +238,27 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
 
     /** 当前分组过滤下的可见数据 */
     private fun visible(list: List<UserPreviewsBean>): MutableList<UserPreviewsBean> {
-        if (!groupEnabled || groupFilter == FollowGroupStore.ALL) return list.toMutableList()
-        return list.filter {
+        // 先按显示模式筛:只看插画时不显示没插画的人,只看小说同理
+        val byMode = list.filter {
+            when (stripMode) {
+                UserListAdapter.StripMode.ILLUST -> it.illusts.isNotEmpty()
+                UserListAdapter.StripMode.NOVEL -> it.novels.isNotEmpty()
+                else -> true
+            }
+        }
+        if (!groupEnabled || groupFilter == FollowGroupStore.ALL) return byMode.toMutableList()
+        return byMode.filter {
             val g = FollowGroupStore.groupOf(it.user.id)
             if (groupFilter == FollowGroupStore.NONE) g == FollowGroupStore.NONE else g == groupFilter
         }.toMutableList()
+    }
+
+    private fun renderWorksButton() {
+        _header?.buttonWorksType?.text = when (stripMode) {
+            UserListAdapter.StripMode.ILLUST -> getString(R.string.works_illust)
+            UserListAdapter.StripMode.NOVEL -> getString(R.string.works_novel)
+            else -> getString(R.string.works_all)
+        }
     }
 
     private fun applyFilter() {
@@ -255,20 +270,31 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
     private fun renderGroupChips() {
         val bar = groupBar ?: return
         bar.groupChips.removeAllViews()
-        addGroupChip(bar, getString(R.string.user_group_all), FollowGroupStore.ALL)
-        addGroupChip(bar, getString(R.string.user_group_none), FollowGroupStore.NONE)
+        val modeFiltered = fullData.filter { matchesMode(it) }
+        addGroupChip(bar, getString(R.string.user_group_all), FollowGroupStore.ALL, modeFiltered.size)
+        val none = modeFiltered.count { FollowGroupStore.groupOf(it.user.id) == FollowGroupStore.NONE }
+        addGroupChip(bar, getString(R.string.user_group_none), FollowGroupStore.NONE, none)
         FollowGroupStore.groups().forEach { group ->
-            addGroupChip(
-                bar,
-                "${group.name} ${FollowGroupStore.countIn(group.id)}",
-                group.id
-            )
+            val count = modeFiltered.count { FollowGroupStore.groupOf(it.user.id) == group.id }
+            addGroupChip(bar, group.name, group.id, count)
         }
     }
 
-    private fun addGroupChip(bar: ViewUserGroupBarBinding, label: String, value: Int) {
+    /** 当前显示模式下该用户是否有作品可展示 */
+    private fun matchesMode(bean: UserPreviewsBean): Boolean = when (stripMode) {
+        UserListAdapter.StripMode.ILLUST -> bean.illusts.isNotEmpty()
+        UserListAdapter.StripMode.NOVEL -> bean.novels.isNotEmpty()
+        else -> true
+    }
+
+    private fun addGroupChip(
+        bar: ViewUserGroupBarBinding,
+        label: String,
+        value: Int,
+        count: Int
+    ) {
         val chip = Chip(requireContext()).apply {
-            text = label
+            text = "$label $count"
             isCheckable = true
             isChecked = groupFilter == value
             setOnClickListener {

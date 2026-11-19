@@ -24,6 +24,8 @@ import com.perol.asdpl.pixivez.databinding.ActivityDownloadManagerBinding
 import com.perol.asdpl.pixivez.databinding.DialogDownloadConfigBinding
 import com.perol.asdpl.pixivez.networks.ServiceFactory.gson
 import com.perol.asdpl.pixivez.data.NovelDownloadStore
+import com.perol.asdpl.pixivez.objects.DownloadFiles
+import com.perol.asdpl.pixivez.objects.FileOpenUtil
 import com.perol.asdpl.pixivez.objects.Toasty
 import com.perol.asdpl.pixivez.services.IllustD
 import com.perol.asdpl.pixivez.services.PxEZApp
@@ -39,8 +41,13 @@ import java.io.File
 class DownloadManagerActivity : RinkActivity() {
 
     private lateinit var binding: ActivityDownloadManagerBinding
-    private lateinit var downloadTaskAdapter: DownloadTaskAdapter
-    private lateinit var novelAdapter: NovelDownloadAdapter
+    private lateinit var entryAdapter: DownloadEntryAdapter
+    // 顶部计数:本次进页面时还在队列里的任务 + 这次完成的数量
+    private var pendingAtOpen = 0
+    private var doneThisSession = 0
+    private var knownDone = mutableSetOf<Int>()
+    private var lastModels = listOf<com.ketch.DownloadModel>()
+    private var currentTab = 0
     private val ketch by lazy { PxEZApp.instance.ketch }
 
     internal class KetchDiffCallback : DiffUtil.ItemCallback<DownloadModel>() {
@@ -60,13 +67,22 @@ class DownloadManagerActivity : RinkActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
-        downloadTaskAdapter = DownloadTaskAdapter()
-        downloadTaskAdapter.setDiffCallback(KetchDiffCallback())
+        entryAdapter = DownloadEntryAdapter()
         binding.progressList.apply {
-            adapter = downloadTaskAdapter
+            adapter = entryAdapter
             layoutManager = LinearLayoutManager(context)
         }
         setupTabs()
+        binding.progressList.itemAnimator = null
+        entryAdapter.setOnItemClickListener { _, _, position ->
+            val entry = entryAdapter.data.getOrNull(position) ?: return@setOnItemClickListener
+            showEntryDialog(entry)
+        }
+        entryAdapter.setOnItemLongClickListener { _, _, position ->
+            val entry = entryAdapter.data.getOrNull(position) ?: return@setOnItemLongClickListener false
+            showEntryActions(entry)
+            true
+        }
         binding.downloadlistrefreshlayout.setOnRefreshListener {
             // refreshList() //TODO: fix list refresh
             lifecycleScope.launch {
@@ -81,46 +97,230 @@ class DownloadManagerActivity : RinkActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ketch.observeDownloads().flowOn(Dispatchers.IO).collect {
-                    downloadTaskAdapter.setDiffNewData(it.asReversed().toMutableList())
-                    updateCount(it)
+                    withContext(Dispatchers.Main) {
+                        onModelsChanged(it)
+                    }
                 }
             }
         }
     }
 
-    // 顶部 插画/小说 两个分栏,各自一个列表;点条目用第三方应用打开
+    // 顶部 插画/小说 分栏;列表来自 ketch 队列 + 目录扫描
     private fun setupTabs() {
-        novelAdapter = NovelDownloadAdapter()
         binding.downloadTabs.removeAllTabs()
         binding.downloadTabs.addTab(binding.downloadTabs.newTab().setText(R.string.works_illust))
         binding.downloadTabs.addTab(binding.downloadTabs.newTab().setText(R.string.works_novel))
         binding.downloadTabs.addOnTabSelectedListener(object :
             com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab) {
-                renderTab(tab.position)
+                currentTab = tab.position
+                // 换栏目时重新计数(各栏目自己的进度)
+                pendingAtOpen = pendingForTab(lastModels, currentTab)
+                doneThisSession = 0
+                render()
             }
 
             override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
             override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
         })
-        renderTab(0)
+        currentTab = 0
     }
 
-    private fun renderTab(position: Int) {
-        if (position == 0) {
-            binding.progressList.adapter = downloadTaskAdapter
+    private fun onModelsChanged(models: List<com.ketch.DownloadModel>) {
+        val first = lastModels.isEmpty()
+        lastModels = models
+        if (first) {
+            pendingAtOpen = pendingForTab(models, currentTab)
+            doneThisSession = 0
+            knownDone = models.filter { it.status == Status.SUCCESS }
+                .map { it.id }.toMutableSet()
         } else {
-            novelAdapter.setList(NovelDownloadStore.all())
-            binding.progressList.adapter = novelAdapter
+            // 本次页面里完成的任务数
+            models.filter { it.status == Status.SUCCESS && it.id !in knownDone }.forEach {
+                knownDone.add(it.id)
+                doneThisSession++
+            }
+        }
+        render()
+    }
+
+    private fun pendingForTab(models: List<com.ketch.DownloadModel>, tab: Int): Int =
+        if (tab == 0) models.count { it.status != Status.SUCCESS } else 0
+
+    private fun render() {
+        val store = File(PxEZApp.storepath)
+        val entries = buildEntries(store, currentTab == 1)
+        entryAdapter.setNewInstance(entries.toMutableList())
+        // 前面的 n = 这次完成的,n = 这次队列总量;都完了就 0/0
+        if (doneThisSession == 0 && pendingAtOpen == 0) {
+            binding.progress.text = getString(R.string.fractional, 0, 0)
+        } else {
+            binding.progress.text = getString(
+                R.string.fractional,
+                doneThisSession,
+                doneThisSession + pendingAtOpen
+            )
         }
     }
 
-    // 顶部计数:插画任务 + 小说导出记录一起算
-    private fun updateCount(models: List<com.ketch.DownloadModel>) {
-        val novels = NovelDownloadStore.all()
-        val total = models.size + novels.size
-        val pending = models.count { it.status != Status.SUCCESS }
-        binding.progress.text = getString(R.string.fractional, pending, total)
+    /** 建当前栏目的行:插画=ketch 任务 + 目录里扫到的图片;小说=导出记录 + Novel 目录 */
+    private fun buildEntries(store: File, novelTab: Boolean): List<DownloadEntry> {
+        val result = mutableListOf<DownloadEntry>()
+        if (!novelTab) {
+            lastModels.forEach { model ->
+                val file = File(model.path, model.fileName)
+                var title = model.fileName
+                var illustId: Int? = null
+                try {
+                    val illustD = gson.decodeFromString<IllustD>(model.metaData)
+                    title = "${illustD.title}${illustD.pString("_p")}"
+                    illustId = illustD.id
+                } catch (e: Exception) {
+                    // 保持文件名
+                }
+                val subtitle = when (model.status) {
+                    Status.SUCCESS -> getString(R.string.download_done)
+                    else -> "${model.progress}% · ${model.status}"
+                }
+                result.add(
+                    DownloadEntry(
+                        key = "task-${model.id}",
+                        title = title,
+                        subtitle = subtitle,
+                        progress = model.progress,
+                        isNovel = false,
+                        file = file,
+                        coverUrl = model.url,
+                        illustId = illustId,
+                        model = model
+                    )
+                )
+            }
+            // 目录里已有但不在队列里的图片(旧下载)
+            val taskFiles = lastModels.map { File(it.path, it.fileName).name }.toSet()
+            val imageDir = File(store, "")
+            DownloadFiles.list(imageDir)
+                .filter { DownloadFiles.isImage(it) && it.name !in taskFiles }
+                .forEach { file ->
+                    result.add(
+                        DownloadEntry(
+                            key = "file-${file.absolutePath}",
+                            title = file.name,
+                            subtitle = "${file.length() / 1024}KB · ${dateText(file)}",
+                            progress = 100,
+                            isNovel = false,
+                            file = file
+                        )
+                    )
+                }
+        } else {
+            val records = NovelDownloadStore.all()
+            val recordPaths = records.map { it.path }.toSet()
+            records.forEach { item ->
+                result.add(
+                    DownloadEntry(
+                        key = "novel-${item.path}",
+                        title = item.title,
+                        subtitle = "${item.format} · ${item.size / 1024}KB · ${dateText(File(item.path))}",
+                        progress = 100,
+                        isNovel = true,
+                        file = File(item.path),
+                        coverUrl = item.thumb,
+                        novelId = item.id
+                    )
+                )
+            }
+            DownloadFiles.list(File(store, "Novel"))
+                .filter { DownloadFiles.isNovel(it) && it.absolutePath !in recordPaths }
+                .forEach { file ->
+                    result.add(
+                        DownloadEntry(
+                            key = "novel-file-${file.absolutePath}",
+                            title = file.nameWithoutExtension,
+                            subtitle = "${file.extension} · ${file.length() / 1024}KB",
+                            progress = 100,
+                            isNovel = true,
+                            file = file
+                        )
+                    )
+                }
+        }
+        return result
+    }
+
+    private fun dateText(file: File): String =
+        android.text.format.DateFormat.format("MM-dd HH:mm", file.lastModified()).toString()
+
+    // 点一行:进作品页 或 用第三方应用打开文件
+    private fun showEntryDialog(entry: DownloadEntry) {
+        val labels = mutableListOf<String>()
+        val actions = mutableListOf<() -> Unit>()
+        if (entry.illustId != null) {
+            labels.add(getString(R.string.open_work_page))
+            actions.add {
+                entry.illustId?.let { com.perol.asdpl.pixivez.ui.pic.PictureActivity.start(this, it) }
+            }
+        }
+        if (entry.novelId != null) {
+            labels.add(getString(R.string.open_work_page))
+            actions.add {
+                entry.novelId?.let { com.perol.asdpl.pixivez.ui.novel.NovelActivity.start(this, it) }
+            }
+        }
+        if (entry.file != null) {
+            labels.add(getString(R.string.open_file))
+            actions.add { entry.file?.let { FileOpenUtil.open(this, it) } }
+        }
+        if (labels.isEmpty()) return
+        MaterialDialogs(this)
+            .setTitle(entry.title)
+            .setItems(labels.toTypedArray()) { d, which ->
+                d.dismiss()
+                actions.getOrNull(which)?.invoke()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showEntryActions(entry: DownloadEntry) {
+        MaterialDialogs(this).show {
+            setTitle(entry.title)
+            setItems(R.array.download_task_choice) { _, index ->
+                when (index) {
+                    0 -> MaterialDialogs(this@DownloadManagerActivity).show {
+                        setMessage(entry.subtitle)
+                        setPositiveButton(R.string.ok) { _, _ -> }
+                    }
+                    1 -> entry.model?.let { ketch.retry(it.id) }
+                    2 -> entry.model?.let { ketch.pause(it.id) }
+                    3 -> entry.model?.let { ketch.resume(it.id) }
+                    else -> deleteEntry(entry)
+                }
+            }
+            cancelButton()
+        }
+    }
+
+    private fun deleteEntry(entry: DownloadEntry) {
+        MaterialDialogs(this).show {
+            setMessage(R.string.confirm_title)
+            confirmButton { _, _ ->
+                entry.model?.let { ketch.clearDb(it.id, it.status != Status.SUCCESS) }
+                if (entry.isNovel && entry.file != null) {
+                    NovelDownloadStore.remove(
+                        com.perol.asdpl.pixivez.data.NovelDownload(0, "", "", "", entry.file!!.absolutePath)
+                    )
+                }
+                entry.file?.delete()
+                render()
+            }
+            cancelButton()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        render()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -295,21 +495,17 @@ class DownloadManagerActivity : RinkActivity() {
     private fun refreshList() {
         lifecycleScope.launch(Dispatchers.IO) {
             val list = ketch.getAllDownloads().asReversed()
-            downloadTaskAdapter.setList(list)
+            val keep = list.map { it.fileName }.toSet()
+            // 把没有任务认领的 .temp 收进 .cache,队列里的留着续传
+            DownloadFiles.stashTemps(File(PxEZApp.storepath), keep)
             withContext(Dispatchers.Main) {
-                // 进页面先把计数写上,别停在布局里的 "?/?" 占位
-                updateCount(list)
-                if (binding.downloadTabs.selectedTabPosition == 1) {
-                    novelAdapter.setList(NovelDownloadStore.all())
-                }
+                lastModels = list
+                pendingAtOpen = pendingForTab(list, currentTab)
+                knownDone = list.filter { it.status == Status.SUCCESS }.map { it.id }.toMutableSet()
+                    .toMutableSet()
+                doneThisSession = 0
+                render()
             }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (binding.downloadTabs.selectedTabPosition == 1) {
-            novelAdapter.setList(NovelDownloadStore.all())
         }
     }
 

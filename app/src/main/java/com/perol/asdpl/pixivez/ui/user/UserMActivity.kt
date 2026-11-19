@@ -193,7 +193,7 @@ class UserMActivity : RinkActivity() {
             override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
             override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
         })
-        applyTabStyle()
+        binding.tablayout.post { applyTabStyle() }
         viewModel.currentTab.observeAfterSet(this) {
             binding.viewpager.setCurrentItem(it, false)
         }

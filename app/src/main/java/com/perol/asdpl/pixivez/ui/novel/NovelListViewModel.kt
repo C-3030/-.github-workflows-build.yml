@@ -83,6 +83,13 @@ class NovelListViewModel : BaseViewModel() {
                     }
                 }
             }
+            if (com.perol.asdpl.pixivez.data.SearchFilterStore.includeTags().isNotEmpty()) {
+                novels.removeAll { novel ->
+                    novel.tags.none { tag ->
+                        com.perol.asdpl.pixivez.data.SearchFilterStore.isIncluded(tag.name)
+                    }
+                }
+            }
             if (args["sort"] == "length_desc") novels.sortByDescending { it.text_length }
         }
         return novels

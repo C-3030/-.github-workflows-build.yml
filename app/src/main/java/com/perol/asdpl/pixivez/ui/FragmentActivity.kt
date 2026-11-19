@@ -76,9 +76,12 @@ class FragmentActivity : RinkActivity() {
         binding = ActivityFragmentHostBinding.inflate(layoutInflater)
         val targetTag = intent.extras!!.getString("target")!!
         val target = fragments[targetTag]!!
-        binding.toolbar.title =
-            (intent.extras!!.getString("title")?.toIntOrNull() ?: target.title)
-                ?.let { getString(it) } ?: targetTag
+        // title 可能是字符串资源 id,也可能是直接给的文字(如"关注");以前非数字一律回退成 tag
+        val rawTitle = intent.extras!!.getString("title")
+        binding.toolbar.title = when {
+            rawTitle.isNullOrBlank() -> target.title?.let { getString(it) } ?: targetTag
+            else -> rawTitle.toIntOrNull()?.let { getString(it) } ?: rawTitle
+        }
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
         supportActionBar!!.setDisplayHomeAsUpEnabled(true)
