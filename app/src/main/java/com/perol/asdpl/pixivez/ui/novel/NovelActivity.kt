@@ -19,6 +19,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.core.text.HtmlCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -35,9 +36,12 @@ import com.perol.asdpl.pixivez.databinding.ActivityNovelBinding
 import com.perol.asdpl.pixivez.databinding.ViewNovelChunkBinding
 import com.perol.asdpl.pixivez.databinding.ViewNovelHeaderBinding
 import com.perol.asdpl.pixivez.databinding.ViewNovelImageBinding
+import com.perol.asdpl.pixivez.objects.CrashHandler
+import com.perol.asdpl.pixivez.objects.Toasty
 import com.perol.asdpl.pixivez.services.PxEZApp
 import com.perol.asdpl.pixivez.ui.pic.PictureActivity
 import com.perol.asdpl.pixivez.ui.user.UserMActivity
+import kotlinx.coroutines.launch
 
 // 小说阅读页:头部(标题/作者/标签)+ 图文分块正文(标记渲染见 NovelMarkup),
 // 字号记忆、收藏 toggle、系列上/下一篇
@@ -181,10 +185,47 @@ class NovelActivity : RinkActivity() {
                         d.dismiss()
                     }.show()
             }
+            R.id.action_novel_download -> exportNovel()
             R.id.action_novel_share -> share()
             else -> return super.onOptionsItemSelected(item)
         }
         return true
+    }
+
+    // 下载:选格式 → 后台导出 → 提示保存位置
+    private fun exportNovel() {
+        val novel = viewModel.novel.value
+        val chunks = viewModel.chunks.value.orEmpty()
+        if (novel == null || chunks.isEmpty()) {
+            Toasty.warning(this, R.string.novel_download_empty)
+            return
+        }
+        val formats = arrayOf(
+            getString(R.string.novel_download_txt),
+            getString(R.string.novel_download_epub)
+        )
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.novel_download)
+            .setItems(formats) { d, which ->
+                d.dismiss()
+                val format = if (which == 1) NovelExporter.Format.EPUB else NovelExporter.Format.TXT
+                Toasty.info(this, R.string.novel_download_running)
+                lifecycleScope.launch {
+                    try {
+                        val file = NovelExporter.export(this@NovelActivity, novel, chunks, format)
+                        Toasty.success(
+                            this@NovelActivity,
+                            getString(R.string.novel_download_done, file.absolutePath)
+                        )
+                    } catch (e: Exception) {
+                        CrashHandler.instance.e("novel", "export failed", e)
+                        Toasty.error(
+                            this@NovelActivity,
+                            getString(R.string.novel_download_failed, e.message ?: "")
+                        )
+                    }
+                }
+            }.show()
     }
 
     private fun changeFont(delta: Float) {

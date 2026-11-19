@@ -378,4 +378,24 @@
     <string name="novel_body_load_failed">正文加载失败，请重试</string>
     <string name="novel_retry">重试</string>
     <string name="nav_bar_edit">导航栏</string>
+    <string name="novel_download">下载小说</string>
+    <string name="novel_download_txt">TXT(纯文字)</string>
+    <string name="novel_download_epub">EPUB(含插图)</string>
+    <string name="novel_download_empty">正文还没加载好</string>
+    <string name="novel_download_running">正在导出…</string>
+    <string name="novel_download_done">已保存到 %1$s</string>
+    <string name="novel_download_failed">导出失败:%1$s</string>
+    <string name="user_group">分组</string>
+    <string name="user_group_manage">管理分组</string>
+    <string name="user_group_all">全部</string>
+    <string name="user_group_none">未分组</string>
+    <string name="user_group_new">新建分组</string>
+    <string name="user_group_rename">重命名</string>
+    <string name="user_group_delete">删除分组</string>
+    <string name="user_group_name_hint">分组名</string>
+    <string name="user_group_moved">已移动 %1$d 人</string>
+    <string name="user_group_empty">还没有分组</string>
+    <string name="user_select_mode">多选</string>
+    <string name="user_selected_count">已选 %1$d 人</string>
+    <string name="user_move_to_group">移动到分组</string>
 </resources>

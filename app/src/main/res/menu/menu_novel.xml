@@ -34,6 +34,12 @@
         android:title="@string/novel_line_space"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_novel_download"
+        android:icon="@drawable/ic_nv_download"
+        android:title="@string/novel_download"
+        app:iconTint="?android:colorControlNormal"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/action_novel_share"
         android:icon="@drawable/ic_nv_share"
         android:title="@string/share"
