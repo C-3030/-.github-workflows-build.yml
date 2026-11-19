@@ -28,16 +28,29 @@ package com.perol.asdpl.pixivez.core
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.perol.asdpl.pixivez.R
+import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.perol.asdpl.pixivez.base.BaseVBFragment
+import com.perol.asdpl.pixivez.base.MaterialDialogs
+import com.perol.asdpl.pixivez.base.getInputField
+import com.perol.asdpl.pixivez.base.setInput
+import com.perol.asdpl.pixivez.data.AppDataRepo
+import com.perol.asdpl.pixivez.data.FollowGroupStore
+import com.perol.asdpl.pixivez.data.model.UserPreviewsBean
 import com.perol.asdpl.pixivez.databinding.FragmentListBinding
+import com.perol.asdpl.pixivez.databinding.ViewUserGroupBarBinding
 import com.perol.asdpl.pixivez.databinding.ViewRestrictButtonBinding
 import com.perol.asdpl.pixivez.objects.InteractionUtil.visRestrictTag
+import com.perol.asdpl.pixivez.objects.Toasty
 import com.perol.asdpl.pixivez.objects.argument
 import com.perol.asdpl.pixivez.objects.argumentNullable
 import com.perol.asdpl.pixivez.objects.getMaxColumn
@@ -74,6 +87,18 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
         get() = requireNotNull(_bindingHeader) { "The property of binding has been destroyed." }
     private lateinit var userListAdapter: UserListAdapter
     private val viewModel: UserListViewModel by viewModels()
+
+    // ---- 关注用户分组 + 列表内多选 ----
+    /** 只有自己的"关注用户"页有分组:粉丝/搜索/相关列表没有归属关系 */
+    private val groupEnabled: Boolean
+        get() = TAG == "Following" && AppDataRepo.isSelfPage(userid ?: 0)
+    private var groupFilter = FollowGroupStore.ALL
+    private var selecting = false
+    private val selected = LinkedHashSet<Int>()
+    private var fullData: MutableList<UserPreviewsBean> = mutableListOf()
+    private var _groupBar: ViewUserGroupBarBinding? = null
+    private val groupBar: ViewUserGroupBarBinding?
+        get() = _groupBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -128,6 +153,16 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
         userListAdapter.setOnLoadMoreListener {
             viewModel.onLoadMore()
         }
+        userListAdapter.onSelectionStart = { bean -> enterSelection(bean) }
+        userListAdapter.onSelectionToggle = { bean -> toggleSelection(bean) }
+        if (groupEnabled) {
+            setHasOptionsMenu(true)
+            activity?.invalidateOptionsMenu()
+            _groupBar = ViewUserGroupBarBinding.inflate(layoutInflater)
+            userListAdapter.addHeaderView(_groupBar!!.root)
+            _groupBar!!.groupEdit.setOnClickListener { showGroupManager() }
+            renderGroupChips()
+        }
         binding.swipeRefreshLayout.setOnRefreshListener {
             viewModel.onLoadFirst()
         }
@@ -146,7 +181,8 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
     private fun initViewModel() {
         viewModel.data.observe(viewLifecycleOwner) {
             if (it != null) {
-                userListAdapter.setList(it)
+                fullData = it
+                applyFilter()
             } else {
                 userListAdapter.loadMoreFail()
             }
@@ -160,7 +196,10 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
         }
         viewModel.dataAdded.observe(viewLifecycleOwner) {
             if (it != null) {
-                userListAdapter.addData(it)
+                fullData.addAll(it)
+                val extra = visible(it)
+                if (extra.isNotEmpty()) userListAdapter.addData(extra)
+                if (groupEnabled) renderGroupChips()
             } else {
                 userListAdapter.loadMoreFail()
             }
@@ -172,7 +211,231 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
 
     override fun onDestroy() {
         _bindingHeader = null
+        _groupBar = null
         super.onDestroy()
+    }
+
+    // ================= 分组 & 多选 =================
+
+    /** 当前分组过滤下的可见数据 */
+    private fun visible(list: List<UserPreviewsBean>): MutableList<UserPreviewsBean> {
+        if (!groupEnabled || groupFilter == FollowGroupStore.ALL) return list.toMutableList()
+        return list.filter {
+            val g = FollowGroupStore.groupOf(it.user.id)
+            if (groupFilter == FollowGroupStore.NONE) g == FollowGroupStore.NONE else g == groupFilter
+        }.toMutableList()
+    }
+
+    private fun applyFilter() {
+        userListAdapter.setList(visible(fullData))
+        if (groupEnabled) renderGroupChips()
+    }
+
+    /** 顶部分组 chip:全部 / 未分组 / 各分组(带人数) */
+    private fun renderGroupChips() {
+        val bar = groupBar ?: return
+        bar.groupChips.removeAllViews()
+        addGroupChip(bar, getString(R.string.user_group_all), FollowGroupStore.ALL)
+        addGroupChip(bar, getString(R.string.user_group_none), FollowGroupStore.NONE)
+        FollowGroupStore.groups().forEach { group ->
+            addGroupChip(
+                bar,
+                "${group.name} ${FollowGroupStore.countIn(group.id)}",
+                group.id
+            )
+        }
+    }
+
+    private fun addGroupChip(bar: ViewUserGroupBarBinding, label: String, value: Int) {
+        val chip = Chip(requireContext()).apply {
+            text = label
+            isCheckable = true
+            isChecked = groupFilter == value
+            setOnClickListener {
+                groupFilter = value
+                applyFilter()
+            }
+        }
+        bar.groupChips.addView(chip)
+    }
+
+    private fun showGroupManager() {
+        val groups = FollowGroupStore.groups()
+        val labels = groups.map {
+            "${it.name} (${FollowGroupStore.countIn(it.id)})"
+        } + getString(R.string.user_group_new)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.user_group_manage)
+            .setItems(labels.toTypedArray()) { d, which ->
+                d.dismiss()
+                if (which >= groups.size) {
+                    promptNewGroup()
+                } else {
+                    editGroup(groups[which].id, groups[which].name)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun editGroup(id: Int, name: String) {
+        val actions = arrayOf(
+            getString(R.string.user_group_rename),
+            getString(R.string.user_group_delete)
+        )
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(name)
+            .setItems(actions) { d, which ->
+                d.dismiss()
+                if (which == 0) {
+                    MaterialDialogs(requireContext()).show {
+                        setTitle(R.string.user_group_rename)
+                        setInput {
+                            hint = getString(R.string.user_group_name_hint)
+                            editText?.setText(name)
+                        }
+                        confirmButton { dialog, _ ->
+                            val text = getInputField(dialog).text.toString()
+                            if (text.isNotBlank()) FollowGroupStore.rename(id, text)
+                            applyFilter()
+                        }
+                        cancelButton()
+                    }
+                } else {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.user_group_delete)
+                        .setMessage(name)
+                        .setPositiveButton(R.string.ok) { _, _ ->
+                            FollowGroupStore.delete(id)
+                            if (groupFilter == id) groupFilter = FollowGroupStore.ALL
+                            applyFilter()
+                        }
+                        .setNegativeButton(R.string.cancel, null)
+                        .show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun promptNewGroup(onDone: ((Int) -> Unit)? = null) {
+        MaterialDialogs(requireContext()).show {
+            setTitle(R.string.user_group_new)
+            setInput { hint = getString(R.string.user_group_name_hint) }
+            confirmButton { dialog, _ ->
+                val text = getInputField(dialog).text.toString().trim()
+                if (text.isEmpty()) return@confirmButton
+                val group = FollowGroupStore.create(text)
+                applyFilter()
+                onDone?.invoke(group.id)
+            }
+            cancelButton()
+        }
+    }
+
+    // ---- 多选 ----
+
+    private fun enterSelection(bean: UserPreviewsBean) {
+        selecting = true
+        selected.clear()
+        selected.add(bean.user.id)
+        syncSelection()
+    }
+
+    private fun startSelection() {
+        selecting = true
+        syncSelection()
+    }
+
+    private fun toggleSelection(bean: UserPreviewsBean) {
+        if (!selected.remove(bean.user.id)) selected.add(bean.user.id)
+        syncSelection()
+        if (selected.isEmpty()) exitSelection()
+    }
+
+    private fun syncSelection() {
+        userListAdapter.selectedIds = selected.toSet()
+        userListAdapter.selectionEnabled = selecting
+        activity?.invalidateOptionsMenu()
+    }
+
+    private fun exitSelection() {
+        selecting = false
+        selected.clear()
+        syncSelection()
+    }
+
+    /** 批量移动:一人只在一个组里,所以是"移动"而不是"复制" */
+    private fun showMoveDialog() {
+        val groups = FollowGroupStore.groups()
+        val labels = ArrayList<String>()
+        labels.add(getString(R.string.user_group_none))
+        groups.forEach { labels.add(it.name) }
+        labels.add(getString(R.string.user_group_new))
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.user_move_to_group)
+            .setItems(labels.toTypedArray()) { d, which ->
+                d.dismiss()
+                when {
+                    which == 0 -> moveSelected(FollowGroupStore.NONE)
+                    which <= groups.size -> moveSelected(groups[which - 1].id)
+                    else -> promptNewGroup { id -> moveSelected(id) }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun moveSelected(groupId: Int) {
+        if (selected.isEmpty()) return
+        val ids = selected.toList()
+        FollowGroupStore.move(ids, groupId)
+        Toasty.info(requireContext(), getString(R.string.user_group_moved, ids.size))
+        exitSelection()
+        applyFilter()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        if (groupEnabled) inflater.inflate(R.menu.menu_user_group, menu)
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        if (groupEnabled) {
+            menu.findItem(R.id.action_user_select)?.isVisible = !selecting
+            menu.findItem(R.id.action_user_move)?.apply {
+                isVisible = selecting
+                title = if (selected.isEmpty()) getString(R.string.user_move_to_group)
+                else getString(R.string.user_selected_count, selected.size)
+            }
+            menu.findItem(R.id.action_user_cancel_select)?.isVisible = selecting
+            menu.findItem(R.id.action_user_group_manage)?.isVisible = !selecting
+        }
+        super.onPrepareOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (groupEnabled) {
+            when (item.itemId) {
+                R.id.action_user_select -> {
+                    startSelection()
+                    return true
+                }
+                R.id.action_user_cancel_select -> {
+                    exitSelection()
+                    return true
+                }
+                R.id.action_user_move -> {
+                    showMoveDialog()
+                    return true
+                }
+                R.id.action_user_group_manage -> {
+                    showGroupManager()
+                    return true
+                }
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     companion object {

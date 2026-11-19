@@ -37,6 +37,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
 import com.chad.brvah.viewholder.BaseViewHolder
+import com.google.android.material.card.MaterialCardView
 import com.perol.asdpl.pixivez.R
 import com.perol.asdpl.pixivez.base.LBaseQuickAdapter
 import com.perol.asdpl.pixivez.base.SMutableLiveData
@@ -66,11 +67,32 @@ class UserListAdapter(layoutResId: Int) :
     private var mSharedPool = RecyclerView.RecycledViewPool()
     private val tempLiveData = SMutableLiveData(false)
 
+    // ---- 多选(关注用户分组用) ----
+    var selectionEnabled = false
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+    var selectedIds: Set<Int> = emptySet()
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+
+    /** 点击(选择模式)/ 长按(进入选择模式)回调,由宿主 Fragment 接管 */
+    var onSelectionToggle: ((UserPreviewsBean) -> Unit)? = null
+    var onSelectionStart: ((UserPreviewsBean) -> Unit)? = null
+
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
         colorPrimary = ThemeUtil.getColorPrimary(context)
         badgeTextColor = ThemeUtil.getColorHighlight(context)
         setOnItemClickListener { adapter, view, position ->
+            val bean = this.data.getOrNull(position)
+            if (bean != null && selectionEnabled) {
+                onSelectionToggle?.invoke(bean)
+                return@setOnItemClickListener
+            }
             val user = this.data[position].user
             addUserBinder(view, user)
             val options = if (PxEZApp.animationEnable) {
@@ -82,6 +104,16 @@ class UserListAdapter(layoutResId: Int) :
             } else null
             UserMActivity.start(context, user, options)
         }
+        setOnItemLongClickListener { _, _, position ->
+            val bean = this.data.getOrNull(position) ?: return@setOnItemLongClickListener false
+            if (!selectionEnabled) {
+                onSelectionStart?.invoke(bean)
+                true
+            } else {
+                onSelectionToggle?.invoke(bean)
+                true
+            }
+        }
     }
     @SuppressLint("SetTextI18n")
     override fun convert(holder: BaseViewHolder, item: UserPreviewsBean) {
@@ -89,6 +121,13 @@ class UserListAdapter(layoutResId: Int) :
             holder.itemView.visibility = View.GONE
             holder.itemView.layoutParams.apply { width = 0; height = 0 }
             return
+        }
+        // 多选:选中的卡片描一圈强调色,未选中恢复原样
+        val selected = selectionEnabled && item.user.id in selectedIds
+        val strokePx = (3 * holder.itemView.resources.displayMetrics.density).toInt()
+        holder.getViewOrNull<MaterialCardView>(R.id.cardview)?.apply {
+            strokeWidth = if (selected) strokePx else 0
+            if (selected) strokeColor = colorPrimary
         }
         val recyclerview = holder.getView<RecyclerView>(R.id.recyclerview_usershow)
         if (item.illusts.isNotEmpty()) {

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 关注用户列表的操作项:进入多选 / 批量移动到分组 / 分组管理 -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_user_select"
+        android:icon="@drawable/ic_nv_check"
+        android:title="@string/user_select_mode"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_user_move"
+        android:icon="@drawable/ic_nv_move"
+        android:title="@string/user_move_to_group"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_user_cancel_select"
+        android:icon="@drawable/ic_nv_close"
+        android:title="@string/user_select_cancel"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_user_group_manage"
+        android:title="@string/user_group_manage"
+        app:showAsAction="never" />
+</menu>
