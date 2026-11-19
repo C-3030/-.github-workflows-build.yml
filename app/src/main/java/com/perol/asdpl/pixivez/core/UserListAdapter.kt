@@ -175,7 +175,9 @@ class UserListAdapter(layoutResId: Int) :
             // 什么都没有(或当前模式没有对应作品):收成"头像 + 名字"的小卡片
             recyclerview.visibility = View.GONE
             holder.getViewOrNull<View>(R.id.cardview)?.let {
-                it.layoutParams = it.layoutParams.apply { height = View.WRAP_CONTENT }
+                it.layoutParams = it.layoutParams.apply {
+                    height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                }
             }
             return
         }
