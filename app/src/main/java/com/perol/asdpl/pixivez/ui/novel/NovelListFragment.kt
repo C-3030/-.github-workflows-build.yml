@@ -5,6 +5,7 @@ import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.perol.asdpl.pixivez.R
+import androidx.lifecycle.lifecycleScope
 import com.perol.asdpl.pixivez.base.BaseVBFragment
 import com.perol.asdpl.pixivez.base.MaterialDialogs
 import com.perol.asdpl.pixivez.databinding.FragmentNovelListBinding
@@ -49,7 +50,7 @@ class NovelListFragment : BaseVBFragment<FragmentNovelListBinding>() {
         configRestrict()
         // 搜索页改筛选(包含/排除标签)后,本页要跟着重新搜
         if (viewModel.tag == NOVEL_TAG.Search) {
-            androidx.lifecycle.lifecycleScope.launch {
+            lifecycleScope.launch {
                 FlowEventBus.observe<Event.SearchFilterChanged>(viewLifecycleOwner) {
                     viewModel.onLoadFirst()
                 }
