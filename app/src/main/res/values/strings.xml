@@ -429,6 +429,7 @@
     <string name="tag_fav_group">分组</string>
     <string name="tag_fav_new_group">新建分组</string>
     <string name="tag_fav_remove">取消收藏</string>
+    <string name="tag_fav_added">已收藏标签:%1$s</string>
     <string name="tag_fav_added_include">已加入包含</string>
     <string name="tag_fav_added_exclude">已加入排除</string>
     <string name="tag_fav_search">搜索此标签</string>
