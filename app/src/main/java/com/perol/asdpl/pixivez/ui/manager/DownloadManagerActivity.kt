@@ -69,9 +69,11 @@ class DownloadManagerActivity : RinkActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
         entryAdapter = DownloadEntryAdapter()
         entryAdapter.onToggle = { entry ->
-            val model = entry.model ?: return@onToggle
-            if (model.status == Status.PAUSED) ketch.resume(model.id)
-            else ketch.pause(model.id)
+            val model = entry.model
+            if (model != null) {
+                if (model.status == Status.PAUSED) ketch.resume(model.id)
+                else ketch.pause(model.id)
+            }
         }
         binding.progressList.apply {
             adapter = entryAdapter
