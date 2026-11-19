@@ -125,7 +125,6 @@
     <string name="multichoicesave">多选保存</string>
     <string name="choice">选择</string>
     <string name="save">保存</string>
-    <string name="download">下载</string>
     <string name="prompt_email">Email</string>
     <string name="prompt_password">密码</string>
     <string name="action_sign_in">登录或注册</string>
