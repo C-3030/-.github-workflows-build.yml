@@ -48,6 +48,7 @@ class DownloadManagerActivity : RinkActivity() {
     private var knownDone = mutableSetOf<Int>()
     private var lastModels = listOf<com.ketch.DownloadModel>()
     private var currentTab = 0
+    private val coverFetched = mutableSetOf<Int>()
     private val ketch by lazy { PxEZApp.instance.ketch }
 
     internal class KetchDiffCallback : DiffUtil.ItemCallback<DownloadModel>() {
@@ -71,8 +72,11 @@ class DownloadManagerActivity : RinkActivity() {
         entryAdapter.onToggle = { entry ->
             val model = entry.model
             if (model != null) {
-                if (model.status == Status.PAUSED) ketch.resume(model.id)
-                else ketch.pause(model.id)
+                when (model.status) {
+                    Status.FAILED, Status.CANCELLED -> ketch.retry(model.id)
+                    Status.PAUSED -> ketch.resume(model.id)
+                    else -> ketch.pause(model.id)
+                }
             }
         }
         binding.progressList.apply {
@@ -156,9 +160,9 @@ class DownloadManagerActivity : RinkActivity() {
 
     private fun render() {
         val store = File(PxEZApp.storepath)
-        val entries = buildEntries(store, currentTab == 1)
-            .sortedBy { it.isDone }  // 没下完的排前面
+        val entries = sortEntries(buildEntries(store, currentTab == 1))
         entryAdapter.setNewInstance(entries.toMutableList())
+        fetchMissingNovelCovers(entries)
         // 前面的 n = 本次完成数量;后面的 n = 进入页面时这一批队列总量
         binding.progress.text = getString(R.string.fractional, doneThisSession, pendingAtOpen)
     }
@@ -178,9 +182,10 @@ class DownloadManagerActivity : RinkActivity() {
                 } catch (e: Exception) {
                     // 保持文件名
                 }
-                val subtitle = when (model.status) {
-                    Status.SUCCESS -> getString(R.string.download_done)
-                    else -> "${model.progress}% · ${model.status}"
+                val subtitle = if (model.status == Status.SUCCESS) {
+                    getString(R.string.download_done)
+                } else {
+                    "${model.progress}% · ${statusText(model.status)}"
                 }
                 result.add(
                     DownloadEntry(
@@ -208,7 +213,7 @@ class DownloadManagerActivity : RinkActivity() {
                         DownloadEntry(
                             key = "file-${file.absolutePath}",
                             title = file.nameWithoutExtension,
-                            subtitle = "${file.length() / 1024}KB · ${dateText(file)}",
+                            subtitle = "${sizeText(file.length())} · ${dateText(file)}",
                             progress = 100,
                             isNovel = false,
                             file = file,
@@ -224,7 +229,7 @@ class DownloadManagerActivity : RinkActivity() {
                     DownloadEntry(
                         key = "novel-${item.path}",
                         title = item.title,
-                        subtitle = "${item.format} · ${item.size / 1024}KB · ${dateText(File(item.path))}",
+                        subtitle = "${item.format} · ${sizeText(item.size)} · ${dateText(File(item.path))}",
                         progress = 100,
                         isNovel = true,
                         file = File(item.path),
@@ -242,7 +247,7 @@ class DownloadManagerActivity : RinkActivity() {
                         DownloadEntry(
                             key = "novel-file-${file.absolutePath}",
                             title = file.nameWithoutExtension.substringBeforeLast('_'),
-                            subtitle = "${file.extension} · ${file.length() / 1024}KB",
+                            subtitle = "${file.extension} · ${sizeText(file.length())}",
                             progress = 100,
                             isNovel = true,
                             file = file,
@@ -252,6 +257,78 @@ class DownloadManagerActivity : RinkActivity() {
                 }
         }
         return result
+    }
+
+    // ---- 排序:待下载的置顶,其余按时间/名字 ----
+    private fun sortEntries(list: List<DownloadEntry>): List<DownloadEntry> {
+        val mode = PxEZApp.instance.pre.getString(SORT_KEY, "date_desc") ?: "date_desc"
+        val pending = list.filter { !it.isDone && it.model != null }
+        val rest = list.filterNot { !it.isDone && it.model != null }
+        val sorted = when (mode) {
+            "date_asc" -> rest.sortedBy { it.file?.lastModified() ?: 0L }
+            "name_asc" -> rest.sortedBy { it.title.lowercase() }
+            "name_desc" -> rest.sortedByDescending { it.title.lowercase() }
+            else -> rest.sortedByDescending { it.file?.lastModified() ?: 0L }
+        }
+        return pending + sorted
+    }
+
+    private fun chooseSort() {
+        val keys = arrayOf("date_desc", "date_asc", "name_asc", "name_desc")
+        val labels = arrayOf(
+            getString(R.string.sort_time_desc),
+            getString(R.string.sort_time_asc),
+            getString(R.string.sort_name_asc),
+            getString(R.string.sort_name_desc)
+        )
+        val cur = keys.indexOf(PxEZApp.instance.pre.getString(SORT_KEY, "date_desc"))
+            .coerceAtLeast(0)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.search_sort)
+            .setSingleChoiceItems(labels, cur) { d, which ->
+                PxEZApp.instance.pre.edit().putString(SORT_KEY, keys[which]).apply()
+                d.dismiss()
+                render()
+            }
+            .show()
+    }
+
+    // 旧的小说记录没有缩略图,用作品 id 拉一次详情补上
+    private fun fetchMissingNovelCovers(entries: List<DownloadEntry>) {
+        entries.filter {
+            it.isNovel && it.coverUrl.isNullOrBlank() && it.novelId != null &&
+                it.novelId !in coverFetched
+        }.forEach { entry ->
+            val id = entry.novelId ?: return@forEach
+            coverFetched.add(id)
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    val novel = com.perol.asdpl.pixivez.data.RetrofitRepository.getInstance()
+                        .api.getNovelDetail(id).novel
+                    NovelDownloadStore.setThumb(entry.file?.absolutePath.orEmpty(), novel.image_urls.medium)
+                    withContext(Dispatchers.Main) { render() }
+                } catch (e: Exception) {
+                    // 拉不到就保持占位图
+                }
+            }
+        }
+    }
+
+    private fun statusText(status: Status): String = when (status) {
+        Status.QUEUED -> getString(R.string.status_queued)
+        Status.STARTED -> getString(R.string.status_started)
+        Status.PROGRESS -> getString(R.string.status_progress)
+        Status.SUCCESS -> getString(R.string.download_done)
+        Status.CANCELLED -> getString(R.string.status_cancelled)
+        Status.FAILED -> getString(R.string.status_failed)
+        Status.PAUSED -> getString(R.string.status_paused)
+        else -> status.name
+    }
+
+    private fun sizeText(bytes: Long): String = when {
+        bytes >= 1024 * 1024 -> String.format(java.util.Locale.ROOT, "%.1fMB", bytes / 1048576f)
+        bytes >= 1024 -> String.format(java.util.Locale.ROOT, "%.0fKB", bytes / 1024f)
+        else -> "${bytes}B"
     }
 
     private fun dateText(file: File): String =
@@ -394,6 +471,10 @@ class DownloadManagerActivity : RinkActivity() {
                 showExportDialog()
             }
 
+            R.id.action_sort -> {
+                chooseSort()
+            }
+
             R.id.action_import -> {
                 showImportDialog()
             }
@@ -502,9 +583,7 @@ class DownloadManagerActivity : RinkActivity() {
     private fun refreshList() {
         lifecycleScope.launch(Dispatchers.IO) {
             val list = ketch.getAllDownloads().asReversed()
-            val keep = list.map { it.fileName }.toSet()
-            // 把没有任务认领的 .temp 收进 .cache,队列里的留着续传
-            DownloadFiles.stashTemps(File(PxEZApp.storepath), keep)
+            // 注意:.temp 是暂停/失败后继续下载的断点,不能自动搬走
             withContext(Dispatchers.Main) {
                 lastModels = list
                 pendingAtOpen = pendingForTab(list, currentTab)
@@ -517,6 +596,8 @@ class DownloadManagerActivity : RinkActivity() {
     }
 
     companion object {
+        private const val SORT_KEY = "download_sort"
+
         fun start(context: Context) {
             context.startActivity(
                 Intent(

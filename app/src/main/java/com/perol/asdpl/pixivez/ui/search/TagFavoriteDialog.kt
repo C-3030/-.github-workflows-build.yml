@@ -191,12 +191,14 @@ class TagFavoriteDialog : DialogFragment() {
                         val include = SearchFilterStoreAccess.include() + tag
                         SearchFilterStoreAccess.save(include.distinct(), SearchFilterStoreAccess.exclude())
                         Toasty.normal(requireContext(), getString(R.string.tag_fav_added_include))
+                        notifyChanged()
                     }
 
                     1 -> {
                         val exclude = SearchFilterStoreAccess.exclude() + tag
                         SearchFilterStoreAccess.save(SearchFilterStoreAccess.include(), exclude.distinct())
                         Toasty.normal(requireContext(), getString(R.string.tag_fav_added_exclude))
+                        notifyChanged()
                     }
 
                     else -> {
@@ -207,6 +209,10 @@ class TagFavoriteDialog : DialogFragment() {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun notifyChanged() {
+        parentFragmentManager.setFragmentResult(RESULT_KEY, Bundle())
     }
 
     override fun onDestroyView() {
@@ -223,6 +229,7 @@ class TagFavoriteDialog : DialogFragment() {
     }
 
     companion object {
+        const val RESULT_KEY = "tag_favorite_changed"
         private const val TAG = "TagFavoriteDialog"
 
         fun show(manager: FragmentManager) {

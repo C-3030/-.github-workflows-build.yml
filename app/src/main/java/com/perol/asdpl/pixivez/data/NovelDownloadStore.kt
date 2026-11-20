@@ -43,6 +43,14 @@ object NovelDownloadStore {
         save(list)
     }
 
+    /** 补上封面(旧记录可能没有缩略图) */
+    fun setThumb(path: String, thumb: String) {
+        val list = all().map {
+            if (it.path == path && it.thumb.isBlank()) it.copy(thumb = thumb) else it
+        }
+        save(list)
+    }
+
     fun remove(item: NovelDownload) {
         save(all().filterNot { it.path == item.path })
     }

@@ -34,6 +34,9 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
+import androidx.lifecycle.lifecycleScope
+import com.perol.asdpl.pixivez.objects.Toasty
+import kotlinx.coroutines.launch
 import androidx.core.text.isDigitsOnly
 import androidx.fragment.app.commit
 import androidx.lifecycle.ViewModelProvider
@@ -109,6 +112,7 @@ class SearchActivity : RinkActivity() {
     }
 
     private lateinit var binding: ActivitySearchBinding
+    private val retrofitRepository = com.perol.asdpl.pixivez.data.RetrofitRepository.getInstance()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
@@ -149,9 +153,9 @@ class SearchActivity : RinkActivity() {
                     } else {
                         binding.searchviewText.inputType = EditorInfo.TYPE_CLASS_NUMBER
                     }
-                    // 综合与作品ID 都要选插画/小说;用户ID 不需要
+                    // 只有"综合"需要选插画/小说;作品ID 全局唯一、用户ID 也只看人
                     binding.searchTypeGroup.visibility =
-                        if (tab.position == 2) View.GONE else View.VISIBLE
+                        if (tab.position == 0) View.VISIBLE else View.GONE
                 }
             }
 
@@ -176,12 +180,8 @@ class SearchActivity : RinkActivity() {
                             if (!query.isDigitsOnly()) {
                                 return true
                             }
-                            // 作品 ID:按当前选的插画/小说走,不再受首页模式限制
-                            if (binding.searchTypeNovel.isChecked) {
-                                NovelActivity.start(this@SearchActivity, query.toInt())
-                            } else {
-                                PictureActivity.start(this@SearchActivity, query.toInt())
-                            }
+                            // 作品 ID 全局唯一,不用选类型:先当插画试,不行再当小说
+                            openWorkById(query.toInt())
                         }
 
                         2 -> {
@@ -230,6 +230,33 @@ class SearchActivity : RinkActivity() {
         if (query.isBlank()) return
         binding.tablayoutSearch.selectTab(binding.tablayoutSearch.getTabAt(0))
         binding.searchviewText.setQuery(query, true)
+    }
+
+    // 作品 ID 直达:插画和小说各试一次,谁存在开谁
+    private fun openWorkById(id: Int) {
+        lifecycleScope.launch {
+            val isIllust = try {
+                retrofitRepository.api.getIllust(id)
+                true
+            } catch (e: Exception) {
+                false
+            }
+            if (isIllust) {
+                PictureActivity.start(this@SearchActivity, id)
+                return@launch
+            }
+            val isNovel = try {
+                retrofitRepository.api.getNovelDetail(id)
+                true
+            } catch (e: Exception) {
+                false
+            }
+            if (isNovel) {
+                NovelActivity.start(this@SearchActivity, id)
+            } else {
+                Toasty.error(this@SearchActivity, R.string.error_unknown)
+            }
+        }
     }
 
     // 插画(含漫画)结果:直接开结果页,绕开 SearchRouter 的 main_mode 分派

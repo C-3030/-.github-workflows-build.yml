@@ -453,4 +453,16 @@
     <string name="search_filter_add_exclude">添加排除标签(输入会自动补全)</string>
     <string name="search_filter_clear">清空</string>
     <string name="download_pause_resume">暂停/继续</string>
+    <string name="download_retry">重试</string>
+    <string name="status_queued">等待中</string>
+    <string name="status_started">开始中</string>
+    <string name="status_progress">下载中</string>
+    <string name="status_cancelled">已取消</string>
+    <string name="status_failed">下载失败</string>
+    <string name="status_paused">已暂停</string>
+    <string name="sort_time_desc">时间(新→旧)</string>
+    <string name="sort_time_asc">时间(旧→新)</string>
+    <string name="sort_name_asc">名字(A→Z)</string>
+    <string name="sort_name_desc">名字(Z→A)</string>
+    <string name="download_selected">下载所选</string>
 </resources>

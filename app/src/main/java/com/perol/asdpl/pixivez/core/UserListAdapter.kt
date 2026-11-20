@@ -127,13 +127,8 @@ class UserListAdapter(layoutResId: Int) :
             }
         }
     }
-    // 只放封面,没有标题等文字
+    // 只放封面,没有标题等文字;专用一个 RecyclerView,类型永远一致
     private fun bindNovelStrip(recyclerview: RecyclerView, item: UserPreviewsBean) {
-        if (item.novels.isEmpty()) {
-            recyclerview.visibility = View.GONE
-            return
-        }
-        recyclerview.visibility = View.VISIBLE
         val adapter = recyclerview.adapter as? NovelCoverAdapter
         if (adapter == null) {
             val novelAdapter = NovelCoverAdapter(R.layout.view_user_illust_item)
@@ -170,7 +165,7 @@ class UserListAdapter(layoutResId: Int) :
         val userImage = holder.getView<NiceImageView>(R.id.imageview_usershow)
         userImage.setBorderColor(if (item.user.is_followed) badgeTextColor else colorPrimary)
         holder.getView<TextView>(R.id.textview_usershowname).text =
-            "${item.user.name} : ${item.user.account}"
+            "${item.user.name.ifBlank { item.user.account }} : ${item.user.account}"
         Glide.with(userImage.context).load(item.user.profile_image_urls.medium)
             .circleCrop().transition(withCrossFade())
             .into(userImage)
@@ -181,18 +176,29 @@ class UserListAdapter(layoutResId: Int) :
             strokeWidth = if (selected) strokePx else 0
             if (selected) strokeColor = colorPrimary
         }
-        val recyclerview = holder.getView<RecyclerView>(R.id.recyclerview_usershow)
+        val illustRv = holder.getView<RecyclerView>(R.id.recyclerview_usershow)
+        val novelRv = holder.getView<RecyclerView>(R.id.recyclerview_usershow_novel)
         val showIllust = stripMode != StripMode.NOVEL && item.illusts.isNotEmpty()
         val showNovel = !showIllust &&
             stripMode != StripMode.ILLUST && item.novels.isNotEmpty()
-        if (!showIllust && !showNovel) {
-            // 什么都没有(或当前模式没有对应作品):只显示头像 + 名字,不显示作品条
-            recyclerview.visibility = View.GONE
-            return
-        }
-        if (showNovel) {
-            bindNovelStrip(recyclerview, item)
-            return
+        when {
+            showIllust -> {
+                illustRv.visibility = View.VISIBLE
+                novelRv.visibility = View.GONE
+            }
+
+            showNovel -> {
+                illustRv.visibility = View.GONE
+                novelRv.visibility = View.VISIBLE
+                bindNovelStrip(novelRv, item)
+                return
+            }
+
+            else -> {
+                illustRv.visibility = View.GONE
+                novelRv.visibility = View.GONE
+                return
+            }
         }
         run {
             val userShowIllustAdapter: SquareMediumAdapter

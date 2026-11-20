@@ -50,6 +50,18 @@ class SearchFilterDialog : DialogFragment() {
         view.findViewById<android.view.View>(R.id.tag_favorites).setOnClickListener {
             TagFavoriteDialog.show(parentFragmentManager)
         }
+        // 收藏标签里加了包含/排除后,回到这里要把最新数据读回来,
+        // 否则点"确定"会拿打开时的旧列表把刚加的标签覆盖掉。
+        parentFragmentManager.setFragmentResultListener(
+            TagFavoriteDialog.RESULT_KEY, this
+        ) { _, _ ->
+            include.clear()
+            include.addAll(SearchFilterStore.includeTags())
+            exclude.clear()
+            exclude.addAll(SearchFilterStore.excludeTags())
+            renderChips(include, includeChips)
+            renderChips(exclude, excludeChips)
+        }
         renderChips(include, includeChips)
         renderChips(exclude, excludeChips)
         return MaterialAlertDialogBuilder(requireContext())

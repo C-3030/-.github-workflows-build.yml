@@ -200,6 +200,7 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
         viewModel.data.observe(viewLifecycleOwner) {
             if (it != null) {
                 fullData = it
+                autoLoadCount = 0
                 applyFilter()
             } else {
                 userListAdapter.loadMoreFail()
@@ -266,6 +267,7 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
     }
 
     private var autoLoading = false
+    private var autoLoadCount = 0
 
     private fun applyFilter() {
         userListAdapter.setList(visible(fullData))
@@ -277,9 +279,11 @@ class UserListFragment : BaseVBFragment<FragmentListBinding>() {
     // 列表填不满屏幕时自动多拉一页,避免出现大片空白。
     private fun maybeAutoLoad() {
         if (autoLoading) return
+        if (autoLoadCount >= 3) return
         if (userListAdapter.data.size >= 8) return
         if (viewModel.nextUrl.value.isNullOrBlank()) return
         autoLoading = true
+        autoLoadCount++
         viewModel.onLoadMore()
     }
 

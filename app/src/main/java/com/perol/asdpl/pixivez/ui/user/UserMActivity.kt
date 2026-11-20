@@ -386,8 +386,16 @@ class UserMActivity : RinkActivity() {
         val privateBookmark = "私密收藏"
         val selectDownload = getString(R.string.download_select)
 
-        // 别人的私密收藏根本拿不到,所以只有自己的页面才给这个选项
-        val options = mutableListOf(allIllust, allManga, allNovel, publicBookmark)
+        // 只显示这个账号确实有的内容:没有小说就不给"全部小说",没有收藏就不给收藏
+        val profile = viewModel.userDetail.value?.profile
+        val options = mutableListOf<String>()
+        if (profile == null || profile.total_illusts > 0) options.add(allIllust)
+        if (profile == null || profile.total_manga > 0) options.add(allManga)
+        if (profile == null || profile.total_novels > 0) options.add(allNovel)
+        if (profile == null || profile.total_illust_bookmarks_public > 0) {
+            options.add(publicBookmark)
+        }
+        // 别人的私密收藏拿不到,只有自己的页面才有
         if (self) options.add(privateBookmark)
         options.add(selectDownload)
 
@@ -406,7 +414,7 @@ class UserMActivity : RinkActivity() {
                         BatchDownloader.fetchUserBookmarks(id, "private")
                     }
 
-                    selectDownload -> showSelectDownload()
+                    selectDownload -> BatchSelectActivity.start(this@UserMActivity, id)
                     else -> Unit
                 }
             }

@@ -35,4 +35,9 @@
         android:id="@+id/action_restart"
         android:title="@string/restart"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sort"
+        android:icon="@drawable/ic_nv_filter"
+        android:title="@string/search_sort"
+        app:showAsAction="ifRoom" />
 </menu>
