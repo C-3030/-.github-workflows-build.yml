@@ -48,8 +48,10 @@ class BatchSelectActivity : RinkActivity() {
     private var tab = 0
     private val illustItems = mutableListOf<WorkItem>()
     private val novelItems = mutableListOf<WorkItem>()
+    private val bookmarkItems = mutableListOf<WorkItem>()
     private var illustNext: String? = null
     private var novelNext: String? = null
+    private var bookmarkNext: String? = null
     private var loading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,6 +75,7 @@ class BatchSelectActivity : RinkActivity() {
         }
         binding.tabs.addTab(binding.tabs.newTab().setText(R.string.works_illust))
         binding.tabs.addTab(binding.tabs.newTab().setText(R.string.works_novel))
+        binding.tabs.addTab(binding.tabs.newTab().setText(R.string.download_bookmark))
         binding.tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(t: TabLayout.Tab) {
                 tab = t.position
@@ -108,6 +111,11 @@ class BatchSelectActivity : RinkActivity() {
                         WorkItem(it.id, it.title, it.image_urls.square_medium, true)
                     })
                     novelNext = novels.next_url
+                    val bookmarks = repo.api.getLikeIllust(userId, "public", null)
+                    bookmarkItems.addAll(bookmarks.illusts.map {
+                        WorkItem(it.id, it.title, it.meta[0].square_medium, false)
+                    })
+                    bookmarkNext = bookmarks.next_url
                 }
             } catch (e: Exception) {
                 Toasty.error(this@BatchSelectActivity, getString(R.string.download_failed, e.message ?: ""))
@@ -119,25 +127,41 @@ class BatchSelectActivity : RinkActivity() {
 
     private fun loadMoreIfNeeded() {
         if (loading) return
-        val next = if (tab == 0) illustNext else novelNext
+        val next = when (tab) {
+            0 -> illustNext
+            1 -> novelNext
+            else -> bookmarkNext
+        }
         if (next.isNullOrBlank()) return
         lifecycleScope.launch {
             loading = true
             try {
                 withContext(Dispatchers.IO) {
                     val repo = RetrofitRepository.getInstance()
-                    if (tab == 0) {
-                        val page = repo.getIllustNext(next)
-                        illustItems.addAll(page.illusts.map {
-                            WorkItem(it.id, it.title, it.meta[0].square_medium, false)
-                        })
-                        illustNext = page.next_url
-                    } else {
-                        val page = repo.getNextNovels(next)
-                        novelItems.addAll(page.novels.map {
-                            WorkItem(it.id, it.title, it.image_urls.square_medium, true)
-                        })
-                        novelNext = page.next_url
+                    when (tab) {
+                        0 -> {
+                            val page = repo.getIllustNext(next)
+                            illustItems.addAll(page.illusts.map {
+                                WorkItem(it.id, it.title, it.meta[0].square_medium, false)
+                            })
+                            illustNext = page.next_url
+                        }
+
+                        1 -> {
+                            val page = repo.getNextNovels(next)
+                            novelItems.addAll(page.novels.map {
+                                WorkItem(it.id, it.title, it.image_urls.square_medium, true)
+                            })
+                            novelNext = page.next_url
+                        }
+
+                        else -> {
+                            val page = repo.getIllustNext(next)
+                            bookmarkItems.addAll(page.illusts.map {
+                                WorkItem(it.id, it.title, it.meta[0].square_medium, false)
+                            })
+                            bookmarkNext = page.next_url
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -148,24 +172,30 @@ class BatchSelectActivity : RinkActivity() {
         }
     }
 
+    private fun currentItems(): MutableList<WorkItem> = when (tab) {
+        0 -> illustItems
+        1 -> novelItems
+        else -> bookmarkItems
+    }
+
     private fun render() {
-        adapter.setNewInstance((if (tab == 0) illustItems else novelItems).toMutableList())
+        adapter.setNewInstance(currentItems().toMutableList())
         updateButton()
     }
 
     private fun updateButton() {
-        val count = (if (tab == 0) illustItems else novelItems).count { it.checked }
-        binding.btnDownload.text = "\${getString(R.string.download_selected)} (\$count)"
+        val count = currentItems().count { it.checked }
+        binding.btnDownload.text = getString(R.string.download_selected) + " (" + count + ")"
     }
 
     private fun downloadSelected() {
-        val source = if (tab == 0) illustItems else novelItems
+        val source = currentItems()
         val selected = source.filter { it.checked }
         if (selected.isEmpty()) {
             Toasty.warning(this, R.string.download_empty)
             return
         }
-        if (tab == 0) {
+        if (tab != 1) {
             lifecycleScope.launch {
                 try {
                     val repo = RetrofitRepository.getInstance()

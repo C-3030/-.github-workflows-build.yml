@@ -50,6 +50,10 @@ import java.util.Date
 import java.util.concurrent.TimeUnit
 
 object RestClient {
+    /** 置为 true 时,404 不再弹提示(内部用来试探资源类型) */
+    @Volatile
+    var silentNotFound = false
+
     private val imageDns by lazy { ImageHttpDns }
     private const val APP_OS = "Android"
     private val App_OS_Version = android.os.Build.VERSION.RELEASE
@@ -216,8 +220,11 @@ object RestClient {
 
                 HttpStatus.NotFound -> {
                     Log.d("404", response.message + response.body)
-                    CoroutineScope(Dispatchers.Main).launch {
-                        ToastQ.post("404 " + response.message)
+                    // 探测作品 id 时(插画/小说各试一次)不该给用户弹 404
+                    if (!silentNotFound) {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            ToastQ.post("404 " + response.message)
+                        }
                     }
                 }
 

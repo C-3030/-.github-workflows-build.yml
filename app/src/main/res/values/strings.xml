@@ -465,4 +465,6 @@
     <string name="sort_name_asc">名字(A→Z)</string>
     <string name="sort_name_desc">名字(Z→A)</string>
     <string name="download_selected">下载所选</string>
+    <string name="download_bookmark">收藏</string>
+    <string name="copy_novel_id">复制作品id</string>
 </resources>

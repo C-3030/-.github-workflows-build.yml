@@ -235,26 +235,32 @@ class SearchActivity : RinkActivity() {
     // 作品 ID 直达:插画和小说各试一次,谁存在开谁
     private fun openWorkById(id: Int) {
         lifecycleScope.launch {
-            val isIllust = try {
-                retrofitRepository.api.getIllust(id)
-                true
-            } catch (e: Exception) {
-                false
-            }
-            if (isIllust) {
-                PictureActivity.start(this@SearchActivity, id)
-                return@launch
-            }
-            val isNovel = try {
-                retrofitRepository.api.getNovelDetail(id)
-                true
-            } catch (e: Exception) {
-                false
-            }
-            if (isNovel) {
-                NovelActivity.start(this@SearchActivity, id)
-            } else {
-                Toasty.error(this@SearchActivity, R.string.error_unknown)
+            // 试探期间不要弹 404,失败也别报"其他错误"(那不是网络问题)
+            com.perol.asdpl.pixivez.networks.RestClient.silentNotFound = true
+            try {
+                val isIllust = try {
+                    retrofitRepository.api.getIllust(id)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+                if (isIllust) {
+                    PictureActivity.start(this@SearchActivity, id)
+                    return@launch
+                }
+                val isNovel = try {
+                    retrofitRepository.api.getNovelDetail(id)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+                if (isNovel) {
+                    NovelActivity.start(this@SearchActivity, id)
+                } else {
+                    Toasty.error(this@SearchActivity, R.string.wrong_id)
+                }
+            } finally {
+                com.perol.asdpl.pixivez.networks.RestClient.silentNotFound = false
             }
         }
     }

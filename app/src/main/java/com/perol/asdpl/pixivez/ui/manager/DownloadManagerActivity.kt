@@ -225,15 +225,16 @@ class DownloadManagerActivity : RinkActivity() {
             val records = NovelDownloadStore.all()
             val recordPaths = records.map { it.path }.toSet()
             records.forEach { item ->
+                val file = File(item.path)
                 result.add(
                     DownloadEntry(
                         key = "novel-${item.path}",
                         title = item.title,
-                        subtitle = "${item.format} · ${sizeText(item.size)} · ${dateText(File(item.path))}",
+                        subtitle = "${item.format} · ${sizeText(item.size)} · ${dateText(file)}",
                         progress = 100,
                         isNovel = true,
-                        file = File(item.path),
-                        coverUrl = item.thumb,
+                        file = file,
+                        coverUrl = item.thumb.ifBlank { localCover(file) },
                         novelId = item.id
                     )
                 )
@@ -251,6 +252,7 @@ class DownloadManagerActivity : RinkActivity() {
                             progress = 100,
                             isNovel = true,
                             file = file,
+                            coverUrl = localCover(file),
                             novelId = nid
                         )
                     )
@@ -329,6 +331,15 @@ class DownloadManagerActivity : RinkActivity() {
         bytes >= 1024 * 1024 -> String.format(java.util.Locale.ROOT, "%.1fMB", bytes / 1048576f)
         bytes >= 1024 -> String.format(java.util.Locale.ROOT, "%.0fKB", bytes / 1024f)
         else -> "${bytes}B"
+    }
+
+    /** 导出时一起存下来的 <文件名>_cover.jpg */
+    private fun localCover(file: File): String? {
+        val base = file.nameWithoutExtension
+        val candidates = listOf("_cover.jpg", "_cover.png", "_cover.webp")
+        return candidates.map { File(file.parentFile, base + it) }
+            .firstOrNull { it.exists() }
+            ?.let { android.net.Uri.fromFile(it).toString() }
     }
 
     private fun dateText(file: File): String =

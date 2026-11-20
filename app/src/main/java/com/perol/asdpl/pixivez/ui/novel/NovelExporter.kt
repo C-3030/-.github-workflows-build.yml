@@ -55,6 +55,9 @@ object NovelExporter {
             Format.TXT -> writeTxt(file, novel, chunks)
             Format.EPUB -> writeEpub(file, novel, chunks)
         }
+        // 顺手把封面落盘:下载页显示封面时不必再走网络
+        runCatching { saveCoverBeside(file, novel) }
+
         // 记一笔,下载进度页据此把小说也列出来
         NovelDownloadStore.add(
             NovelDownload(
@@ -69,6 +72,13 @@ object NovelExporter {
             )
         )
         file
+    }
+
+    /** 把封面存成 <导出文件名>_cover.jpg,失败不影响导出 */
+    private fun saveCoverBeside(exported: File, novel: Novel) {
+        val url = novel.image_urls.large.ifBlank { novel.image_urls.medium }
+        val bytes = fetchBytes(url) ?: return
+        File(exported.parentFile, exported.nameWithoutExtension + "_cover.jpg").writeBytes(bytes)
     }
 
     /** 只下封面图(小说详情接口自带的封面,原图优先) */

@@ -153,14 +153,9 @@ class UserListAdapter(layoutResId: Int) :
     override fun convert(holder: BaseViewHolder, item: UserPreviewsBean) {
         if (item.user.is_blocked == true) {
             holder.itemView.visibility = View.GONE
-            holder.itemView.layoutParams.apply { width = 0; height = 0 }
             return
         }
         holder.itemView.visibility = View.VISIBLE
-        holder.itemView.layoutParams.apply {
-            width = ViewGroup.LayoutParams.MATCH_PARENT
-            height = ViewGroup.LayoutParams.WRAP_CONTENT
-        }
         // 先绑头像和名字,再决定下面展示什么作品条(以前有分支提前 return,漏了绑定)
         val userImage = holder.getView<NiceImageView>(R.id.imageview_usershow)
         userImage.setBorderColor(if (item.user.is_followed) badgeTextColor else colorPrimary)

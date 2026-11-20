@@ -206,10 +206,18 @@ class NovelActivity : RinkActivity() {
                     }.show()
             }
             R.id.action_novel_download -> exportNovel()
+            R.id.action_novel_copy_id -> copyNovelId()
             R.id.action_novel_share -> share()
             else -> return super.onOptionsItemSelected(item)
         }
         return true
+    }
+
+    // 复制作品 id(方便去搜索框直接按 id 打开)
+    private fun copyNovelId() {
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("id", novelId.toString()))
+        Toasty.normal(this, novelId.toString())
     }
 
     // 下载:选格式 → 后台导出 → 提示保存位置
@@ -398,6 +406,8 @@ private class NovelReaderAdapter(
     @SuppressLint("SetTextI18n")
     private fun bindHeader(b: ViewNovelHeaderBinding) {
         val n = novel ?: return
+        Glide.with(b.novelCover).load(n.image_urls.medium)
+            .transition(withCrossFade()).into(b.novelCover)
         b.novelTitle.text = n.title
         b.novelAuthor.text = n.user.name
         b.novelAuthor.setOnClickListener {

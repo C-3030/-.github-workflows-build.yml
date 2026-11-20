@@ -30,11 +30,13 @@ import com.bumptech.glide.GlideBuilder
 import com.bumptech.glide.Registry
 import com.bumptech.glide.annotation.GlideModule
 import com.bumptech.glide.load.DecodeFormat
+import com.bumptech.glide.load.engine.cache.DiskLruCacheFactory
 import com.bumptech.glide.load.engine.cache.LruResourceCache
 import com.bumptech.glide.load.engine.cache.MemorySizeCalculator
 import com.bumptech.glide.module.AppGlideModule
 import com.bumptech.glide.request.RequestOptions
 import com.perol.asdpl.pixivez.networks.HeaderLoaderFactory
+import java.io.File
 import java.io.InputStream
 
 @GlideModule
@@ -47,6 +49,13 @@ class CustomGlideModule : AppGlideModule() {
             .setMemoryCacheScreens(3f)
             .build()
         builder.setMemoryCache(LruResourceCache(calc.memoryCacheSize.toLong()))
+        // 作品图/头像落盘缓存,加载过的不要再删(默认缓存很小,重进就重新下载)
+        builder.setDiskCache(
+            DiskLruCacheFactory(
+                File(context.cacheDir, "glide_cache").absolutePath,
+                1L shl 30 // 1GB
+            )
+        )
         builder.setDefaultRequestOptions(
             RequestOptions().format(DecodeFormat.PREFER_RGB_565)
         )
