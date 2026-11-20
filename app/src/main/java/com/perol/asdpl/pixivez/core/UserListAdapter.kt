@@ -202,10 +202,10 @@ class UserListAdapter(layoutResId: Int) :
         }
         run {
             val userShowIllustAdapter: SquareMediumAdapter
-            if (recyclerview.adapter == null) {
+            if (illustRv.adapter == null) {
                 userShowIllustAdapter =
                     SquareMediumAdapter(R.layout.view_user_illust_item, item.illusts)
-                recyclerview.apply {
+                illustRv.apply {
                     adapter = userShowIllustAdapter
                     layoutManager = LinearLayoutManager(
                         holder.itemView.context,
@@ -217,12 +217,11 @@ class UserListAdapter(layoutResId: Int) :
                     isNestedScrollingEnabled = false
                 }
             } else {
-                val existing = recyclerview.adapter as? SquareMediumAdapter
+                val existing = illustRv.adapter as? SquareMediumAdapter
                 if (existing == null) {
-                    // 之前可能是小说适配器,类型不对就重建
                     val fresh = SquareMediumAdapter(R.layout.view_user_illust_item, item.illusts)
-                    recyclerview.adapter = fresh
-                    recyclerview.setRecycledViewPool(mSharedPool)
+                    illustRv.adapter = fresh
+                    illustRv.setRecycledViewPool(mSharedPool)
                     userShowIllustAdapter = fresh
                 } else {
                     val itemCount = existing.data.size
