@@ -13,11 +13,17 @@ object SearchFilterStore {
 
     private fun read(key: String): List<String> =
         PxEZApp.instance.pre.getString(key, null)
-            ?.split('\n')
-            ?.map { it.trim() }
+            ?.split('\n', '\r')
+            // 用户常把标签写成 "#臭脚#气味#百合#堕落" 一行,顺带按 # 再拆一次
+            ?.flatMap { it.split('#', '＃') }
+            ?.map { cleanEntry(it) }
             ?.filter { it.isNotEmpty() }
             ?.distinct()
             ?: emptyList()
+
+    /** 去掉首尾空白和各种包裹符号,方便和 pixiv 返回的标签逐字比对 */
+    private fun cleanEntry(raw: String): String =
+        raw.trim().trim('「', '」', '『', '』', '"', '\'', '“', '”').trim()
 
     fun includeTags(): List<String> = read(KEY_INCLUDE)
 
@@ -45,14 +51,19 @@ object SearchFilterStore {
         return (listOf(word.trim()) + includes).filter { it.isNotBlank() }.joinToString(" ")
     }
 
-    /** 长标签常用 "/" 拼接多个子标签;vis() 还会带 "|" 分隔的译名,一起拆 */
+    /** 长标签常用 "/" "、" "+" 拼接多个子标签;vis() 还会带 "|" 分隔的译名,一起拆 */
     fun tagParts(tagName: String): List<String> =
-        tagName.split('/', '／', ',', '|').map { it.trim() }.filter { it.isNotEmpty() }
+        tagName.split('/', '／', '、', '，', ',', '|', '｜', '+', '＋', '&', '＆')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
 
     private fun matches(entry: String, tagName: String): Boolean {
+        val wanted = cleanEntry(entry)
+        if (wanted.isEmpty()) return false
         val parts = tagParts(tagName)
-        if (parts.any { it.equals(entry.trim(), true) }) return true
-        return TagAliases.expand(entry).any { alias ->
+        // 先逐字比对(name / translated_name / 拆出来的子标签都算)
+        if (parts.any { it.equals(wanted, true) }) return true
+        return TagAliases.expand(wanted).any { alias ->
             parts.any { part -> part.equals(alias, true) }
         }
     }

@@ -2,6 +2,8 @@ package com.perol.asdpl.pixivez.ui.novel
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import com.perol.asdpl.pixivez.base.BaseViewModel
 import com.perol.asdpl.pixivez.base.DMutableLiveData
@@ -99,35 +101,68 @@ class NovelListViewModel : BaseViewModel() {
 
     // 搜索结果里如果开了"排除标签",列表项可能不带标签,
     // 这时对当页每本补一次详情(只取元数据,不拉正文),按 id 缓存
-    private val tagCache = HashMap<Int, List<com.perol.asdpl.pixivez.data.model.Tag>>()
+    private val tagCache = java.util.concurrent.ConcurrentHashMap<Int, List<com.perol.asdpl.pixivez.data.model.Tag>>()
 
     private suspend fun enrichTags(list: MutableList<Novel>): MutableList<Novel> =
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            list.map { novel ->
-                if (novel.tags.isNotEmpty()) return@map novel
-                val tags = tagCache[novel.id] ?: run {
-                    val fetched = runCatching {
-                        retrofit.api.getNovelDetail(novel.id).novel.tags
-                    }.getOrNull().orEmpty()
-                    tagCache[novel.id] = fetched
-                    fetched
+        kotlinx.coroutines.coroutineScope {
+            val result = list.toMutableList()
+            val targets = result.filter { it.tags.isEmpty() }
+            if (targets.isEmpty()) return@coroutineScope result
+            var fails = 0
+            for (chunk in targets.chunked(4)) {
+                // 详情连续失败就别硬拉了(多半是被限流),这一页保持原样
+                if (fails >= 5) break
+                val fetched = chunk.map { novel ->
+                    async(kotlinx.coroutines.Dispatchers.IO) {
+                        val cached = tagCache[novel.id]
+                        if (cached != null) return@async novel.id to cached
+                        val tags = runCatching {
+                            retrofit.api.getNovelDetail(novel.id).novel.tags
+                        }.getOrNull()
+                        if (tags == null) {
+                            fails++
+                            novel.id to null
+                        } else {
+                            tagCache[novel.id] = tags
+                            novel.id to tags
+                        }
+                    }
+                }.awaitAll().toMap()
+                for (i in result.indices) {
+                    val novel = result[i]
+                    if (novel.tags.isNotEmpty()) continue
+                    val tags = fetched[novel.id]
+                    if (!tags.isNullOrEmpty()) result[i] = novel.copy(tags = tags)
                 }
-                if (tags.isEmpty()) novel else novel.copy(tags = tags)
-            }.toMutableList()
+            }
+            result
         }
+
+    /** 统一出口:搜索页按需补标签,再套排除/包含筛选与本地排序 */
+    private suspend fun prepare(list: MutableList<Novel>): MutableList<Novel> {
+        if (tag != NOVEL_TAG.Search) return transform(list)
+        val store = com.perol.asdpl.pixivez.data.SearchFilterStore
+        val anyFilter = store.excludeTags().isNotEmpty() || store.includeTags().isNotEmpty()
+        val enriched = if (anyFilter && list.any { it.tags.isEmpty() }) enrichTags(list) else list
+        val out = transform(enriched)
+        android.util.Log.d("NovelFilter", "search page: ${list.size} -> ${out.size}, filters=${store.summary()}")
+        return out
+    }
 
     fun onLoadFirst() {
         isRefreshing.value = true
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
             try {
-                val response = loadFirstRx().invoke()
-                var list = response.data()
-                if (tag == NOVEL_TAG.Search &&
-                    com.perol.asdpl.pixivez.data.SearchFilterStore.excludeTags().isNotEmpty()
-                ) {
-                    list = enrichTags(list)
+                var response = loadFirstRx().invoke()
+                var list = prepare(response.data())
+                // 整页都被筛掉时自动再拉一页,免得一进搜索页就是空白
+                var guard = 0
+                while (list.isEmpty() && response.next_url != null && guard < 2) {
+                    response = retrofit.getNextNovels(response.next_url!!)
+                    list = prepare(response.data())
+                    guard++
                 }
-                data.value = transform(list)
+                data.value = list
                 nextUrl.value = response.next_url
             } catch (e: Exception) {
                 data.value = null
@@ -140,13 +175,24 @@ class NovelListViewModel : BaseViewModel() {
     }
 
     fun onLoadMore() {
-        if (nextUrl.value != null) {
-            subscribeNext(
-                { retrofit.getNextNovels(nextUrl.value!!) },
-                dataAdded,
-                nextUrl,
-                ::transform
-            )
+        val url = nextUrl.value ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            try {
+                var response = retrofit.getNextNovels(url)
+                var list = prepare(response.data())
+                var guard = 0
+                while (list.isEmpty() && response.next_url != null && guard < 2) {
+                    response = retrofit.getNextNovels(response.next_url!!)
+                    list = prepare(response.data())
+                    guard++
+                }
+                dataAdded.value = list
+                nextUrl.value = response.next_url
+            } catch (e: Exception) {
+                dataAdded.value = null
+                com.perol.asdpl.pixivez.objects.CrashHandler.instance
+                    .e("novel", "load more failed", e)
+            }
         }
     }
 }
