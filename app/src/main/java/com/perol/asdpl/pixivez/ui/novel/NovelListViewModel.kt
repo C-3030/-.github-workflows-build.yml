@@ -1,6 +1,8 @@
 package com.perol.asdpl.pixivez.ui.novel
 
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import com.perol.asdpl.pixivez.base.BaseViewModel
 import com.perol.asdpl.pixivez.base.DMutableLiveData
 import com.perol.asdpl.pixivez.data.model.Novel
@@ -95,9 +97,46 @@ class NovelListViewModel : BaseViewModel() {
         return novels
     }
 
+    // 搜索结果里如果开了"排除标签",列表项可能不带标签,
+    // 这时对当页每本补一次详情(只取元数据,不拉正文),按 id 缓存
+    private val tagCache = HashMap<Int, List<com.perol.asdpl.pixivez.data.model.Tag>>()
+
+    private suspend fun enrichTags(list: MutableList<Novel>): MutableList<Novel> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            list.map { novel ->
+                if (novel.tags.isNotEmpty()) return@map novel
+                val tags = tagCache[novel.id] ?: run {
+                    val fetched = runCatching {
+                        retrofit.api.getNovelDetail(novel.id).novel.tags
+                    }.getOrNull().orEmpty()
+                    tagCache[novel.id] = fetched
+                    fetched
+                }
+                if (tags.isEmpty()) novel else novel.copy(tags = tags)
+            }.toMutableList()
+        }
+
     fun onLoadFirst() {
         isRefreshing.value = true
-        subscribeNext(loadFirstRx(), data, nextUrl, ::transform) { isRefreshing.value = false }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            try {
+                val response = loadFirstRx().invoke()
+                var list = response.data()
+                if (tag == NOVEL_TAG.Search &&
+                    com.perol.asdpl.pixivez.data.SearchFilterStore.excludeTags().isNotEmpty()
+                ) {
+                    list = enrichTags(list)
+                }
+                data.value = transform(list)
+                nextUrl.value = response.next_url
+            } catch (e: Exception) {
+                data.value = null
+                com.perol.asdpl.pixivez.objects.CrashHandler.instance
+                    .e("novel", "load first failed", e)
+            } finally {
+                isRefreshing.value = false
+            }
+        }
     }
 
     fun onLoadMore() {
