@@ -23,7 +23,13 @@ class NovelCoverAdapter(layoutResId: Int) :
 
     override fun convert(holder: BaseViewHolder, item: Novel) {
         val imageView = holder.getView<ImageView>(R.id.imageview)
-        Glide.with(imageView.context).load(item.image_urls.square_medium)
+        val url = item.image_urls.square_medium
+        if (url.isNullOrBlank()) {
+            imageView.setImageDrawable(null)
+            return
+        }
+        Glide.with(imageView.context).load(url)
+            .placeholder(R.color.transparent).error(R.color.transparent)
             .transition(withCrossFade()).centerCrop().into(imageView)
     }
 }

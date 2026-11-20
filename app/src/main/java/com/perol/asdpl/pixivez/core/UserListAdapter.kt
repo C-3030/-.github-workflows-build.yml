@@ -127,15 +127,10 @@ class UserListAdapter(layoutResId: Int) :
             }
         }
     }
-    /** 隐藏时把高度压到 0,避免残留空间把卡片撑高 */
-    private fun collapseStrip(rv: RecyclerView) {
-        rv.visibility = View.GONE
-        rv.layoutParams = rv.layoutParams.apply { height = 0 }
-    }
-
-    private fun restoreStripHeight(rv: RecyclerView) {
-        val density = rv.resources.displayMetrics.density
-        rv.layoutParams = rv.layoutParams.apply { height = (100 * density).toInt() }
+    /** ViewHolder 被复用时会继承上一个人的横向滚动位置,统一拉回开头 */
+    private fun resetStrip(rv: RecyclerView) {
+        rv.itemAnimator = null
+        (rv.layoutManager as? LinearLayoutManager)?.scrollToPosition(0)
     }
 
     // 只放封面,没有标题等文字;专用一个 RecyclerView,类型永远一致
@@ -158,6 +153,7 @@ class UserListAdapter(layoutResId: Int) :
         } else {
             adapter.setNewInstance(item.novels)
         }
+        resetStrip(recyclerview)
     }
 
     @SuppressLint("SetTextI18n")
@@ -187,6 +183,12 @@ class UserListAdapter(layoutResId: Int) :
         val showIllust = stripMode != StripMode.NOVEL && item.illusts.isNotEmpty()
         val showNovel = !showIllust &&
             stripMode != StripMode.ILLUST && item.novels.isNotEmpty()
+        // 卡片高度只由 XML 决定(没作品 86dp / 有作品 ≈148dp):这里只切可见性。
+        // 以前在这里动态改卡片和内层高度,ViewHolder 复用后改不回来,
+        // 才出现灰色占位、卡片被撑高、头像和作品条错位。
+        holder.itemView.layoutParams = holder.itemView.layoutParams.apply {
+            height = ViewGroup.LayoutParams.WRAP_CONTENT
+        }
         when {
             showIllust -> {
                 illustRv.visibility = View.VISIBLE
@@ -203,24 +205,9 @@ class UserListAdapter(layoutResId: Int) :
             else -> {
                 illustRv.visibility = View.GONE
                 novelRv.visibility = View.GONE
-                // 没有作品:卡片和内容都压到 86dp,只留头像 + 名字
-                collapseStrip(illustRv)
-                collapseStrip(novelRv)
-                val density = holder.itemView.resources.displayMetrics.density
-                val compact = (86 * density).toInt()
-                holder.getViewOrNull<MaterialCardView>(R.id.cardview)?.let { card ->
-                    card.layoutParams = card.layoutParams.apply { height = compact }
-                    (card.getChildAt(0))?.let { inner ->
-                        inner.layoutParams = inner.layoutParams.apply { height = compact }
-                    }
-                }
-                holder.getViewOrNull<TextView>(R.id.textview_usershowname)?.visibility =
-                    View.VISIBLE
                 return
             }
         }
-        restoreStripHeight(illustRv)
-        restoreStripHeight(novelRv)
         run {
             val userShowIllustAdapter: SquareMediumAdapter
             if (illustRv.adapter == null) {
@@ -252,6 +239,7 @@ class UserListAdapter(layoutResId: Int) :
                 }
             }
 
+            resetStrip(illustRv)
             userShowIllustAdapter.setOnItemClickListener { adapter, view, position ->
                 val user = item.user
                 addUserBinder(holder.itemView, user)

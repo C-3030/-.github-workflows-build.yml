@@ -41,8 +41,14 @@ class SquareMediumAdapter(
 
     override fun convert(holder: BaseViewHolder, item: Illust) {
         val imageView = holder.getView<ImageView>(R.id.imageview)
-        Glide.with(imageView.context).load(item.meta[0].square_medium)
-            .placeholder(if (holder.layoutPosition % 2 != 0) R.color.transparent else R.color.gray)
+        val url = item.meta.firstOrNull()?.square_medium
+        if (url.isNullOrBlank()) {
+            imageView.setImageDrawable(null)
+            return
+        }
+        Glide.with(imageView.context).load(url)
+            // 以前按奇偶交替填灰色占位,加载慢/失败时关注页就是一排灰方块
+            .placeholder(R.color.transparent).error(R.color.transparent)
             .transition(withCrossFade()).centerInside().into(imageView)
     }
 }

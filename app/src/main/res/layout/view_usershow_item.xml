@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardview"
     android:layout_width="400dp"
     android:layout_height="wrap_content"
-    android:id="@+id/cardview"
     android:foreground="?android:attr/selectableItemBackground"
     app:cardCornerRadius="4dp"
     app:cardElevation="5dp"
     app:cardMaxElevation="5dp"
     app:cardPreventCornerOverlap="true"
-    app:cardUseCompatPadding="true"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="parent">
+    app:cardUseCompatPadding="true">
 
+    <!-- 高度只由 XML 决定:头像 70+上下 8 → 86dp;有作品条时 8+名字+8+100+8 ≈ 148dp。
+         之前代码里动态改卡片/内层高度,hot recycle 之后收不回去,就把卡片撑乱/裁掉了。 -->
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="86dp">
 
         <com.perol.asdpl.pixivez.view.NiceImageView
             android:id="@+id/imageview_usershow"
@@ -25,12 +25,29 @@
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"
+            android:hapticFeedbackEnabled="true"
             app:border_color='?attr/colorPrimary'
             app:border_width="3.3dp"
             app:is_circle="true"
-            android:hapticFeedbackEnabled="true"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.0" />
+
+        <TextView
+            android:id="@+id/textview_usershowname"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="千夜SQ"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="20sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/imageview_usershow"
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.recyclerview.widget.RecyclerView
@@ -41,6 +58,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginEnd="8dp"
             android:layout_marginBottom="8dp"
+            android:clipToPadding="false"
             android:orientation="horizontal"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -56,6 +74,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginEnd="8dp"
             android:layout_marginBottom="8dp"
+            android:clipToPadding="false"
             android:orientation="horizontal"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -64,27 +83,6 @@
             app:layout_constraintTop_toBottomOf="@+id/textview_usershowname"
             app:layout_constraintVertical_bias="0.0" />
 
-        <TextView
-            android:id="@+id/textview_usershowname"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="8dp"
-            android:text="千夜SQ"
-            android:textColor="?attr/colorPrimary"
-            android:textSize="20sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/imageview_usershow"
-            app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <!--<LinearLayout-->
-    <!--android:layout_gravity="bottom"-->
-    <!--android:layout_width="match_parent"-->
-    <!--android:background="#80FFFFFF"-->
-    <!--android:layout_height="50dp"/>-->
-
 
 </com.google.android.material.card.MaterialCardView>
