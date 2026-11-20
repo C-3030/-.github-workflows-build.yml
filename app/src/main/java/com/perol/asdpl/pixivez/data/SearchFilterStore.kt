@@ -37,7 +37,13 @@ object SearchFilterStore {
     /** 包含标签不做服务端拼接(否则"萝莉"会被换成「ロリ」,而 pixiv 的长标签
      *  "萝莉/妹妹/..." 只认中文子段,拼进去反而把它排掉)。
      *  这里只回原词,真正的包含过滤在 isIncluded() 里按 / 拆分子标签本地做。 */
-    fun applyIncludes(word: String): String = word
+    fun applyIncludes(word: String): String {
+        val includes = includeTags()
+        if (includes.isEmpty()) return word
+        // 用用户写的原词去搜(不换成日文别名),这样"玉足"这种子标签也能在
+        // pixiv 的长标签(白丝/萝莉/玉足/...)里被 AND 命中。
+        return (listOf(word.trim()) + includes).filter { it.isNotBlank() }.joinToString(" ")
+    }
 
     /** 长标签常用 "/" 拼接多个子标签;vis() 还会带 "|" 分隔的译名,一起拆 */
     fun tagParts(tagName: String): List<String> =
@@ -45,6 +51,7 @@ object SearchFilterStore {
 
     private fun matches(entry: String, tagName: String): Boolean {
         val parts = tagParts(tagName)
+        if (parts.any { it.equals(entry.trim(), true) }) return true
         return TagAliases.expand(entry).any { alias ->
             parts.any { part -> part.equals(alias, true) }
         }

@@ -44,9 +44,16 @@ object NovelExporter {
         chunks: List<NovelChunk>,
         format: Format
     ): File = withContext(Dispatchers.IO) {
+        // 文件名太长会写失败:标题只保留前 10 个字,其余用 ... 代替
+        val shortTitle = novel.title
+            .let { if (it.length > 10) it.take(10) + "..." else it }
+            .toLegal()
+            .ifBlank { "novel" }
         val name = buildString {
-            append(novel.title.toLegal().ifBlank { "novel" })
-            novel.series?.title?.let { append("_").append(it.toLegal()) }
+            append(shortTitle)
+            novel.series?.title?.let {
+                append("_").append(if (it.length > 10) it.take(10) + "..." else it.toLegal())
+            }
             append("_").append(novel.id)
         }
         val dir = outputDir()

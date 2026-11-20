@@ -237,6 +237,7 @@ class DownloadManagerActivity : RinkActivity() {
                         coverUrl = item.thumb.ifBlank { localCover(file) },
                         novelId = item.id.takeIf { it != 0 }
                             ?: file.nameWithoutExtension.substringAfterLast('_').toIntOrNull()
+                            ?: idFromFile(file)
                     )
                 )
             }
@@ -334,6 +335,24 @@ class DownloadManagerActivity : RinkActivity() {
         bytes >= 1024 * 1024 -> String.format(java.util.Locale.ROOT, "%.1fMB", bytes / 1048576f)
         bytes >= 1024 -> String.format(java.util.Locale.ROOT, "%.0fKB", bytes / 1024f)
         else -> "${bytes}B"
+    }
+
+    /** 老文件读正文开头的 "地址:https://...id=123" 拿作品 id */
+    private fun idFromFile(file: java.io.File): Int? {
+        if (!file.exists() || file.length() == 0L) return null
+        return try {
+            val head = file.bufferedReader().use { reader ->
+                val sb = StringBuilder()
+                repeat(20) {
+                    val line = reader.readLine() ?: return@repeat
+                    sb.appendLine(line)
+                }
+                sb.toString()
+            }
+            Regex("""id=(\d+)""").find(head)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /** 把网络封面缓存成本地 <文件名>_cover.jpg,以后离线也能显示 */

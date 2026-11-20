@@ -127,14 +127,15 @@ class UserListAdapter(layoutResId: Int) :
             }
         }
     }
-    /** 只调整卡片本身的高度;不碰 itemView 的 LayoutParams(会破坏网格) */
-    private fun fixCardHeight(holder: BaseViewHolder, compact: Boolean) {
-        val card = holder.getViewOrNull<MaterialCardView>(R.id.cardview) ?: return
-        val density = holder.itemView.resources.displayMetrics.density
-        card.layoutParams = card.layoutParams.apply {
-            height = if (compact) (96 * density).toInt()
-            else android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-        }
+    /** 隐藏时把高度压到 0,避免残留空间把卡片撑高 */
+    private fun collapseStrip(rv: RecyclerView) {
+        rv.visibility = View.GONE
+        rv.layoutParams = rv.layoutParams.apply { height = 0 }
+    }
+
+    private fun restoreStripHeight(rv: RecyclerView) {
+        val density = rv.resources.displayMetrics.density
+        rv.layoutParams = rv.layoutParams.apply { height = (100 * density).toInt() }
     }
 
     // 只放封面,没有标题等文字;专用一个 RecyclerView,类型永远一致
@@ -202,12 +203,14 @@ class UserListAdapter(layoutResId: Int) :
             else -> {
                 illustRv.visibility = View.GONE
                 novelRv.visibility = View.GONE
-                // 没有作品:卡片压到最低(头像 + 名字),不留大片空白
-                fixCardHeight(holder, compact = true)
+                // 没有作品:横条高度清零,卡片自然高度(头像 + 名字)
+                collapseStrip(illustRv)
+                collapseStrip(novelRv)
                 return
             }
         }
-        fixCardHeight(holder, compact = false)
+        restoreStripHeight(illustRv)
+        restoreStripHeight(novelRv)
         run {
             val userShowIllustAdapter: SquareMediumAdapter
             if (illustRv.adapter == null) {
