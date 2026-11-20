@@ -220,11 +220,7 @@ class NovelListViewModel : BaseViewModel() {
                 }
                 data.value = list
                 nextUrl.value = response.next_url
-                filterHint()?.let { hint ->
-                    com.perol.asdpl.pixivez.objects.Toasty.info(
-                        com.perol.asdpl.pixivez.services.PxEZApp.instance, hint
-                    )
-                }
+
             } catch (e: Exception) {
                 data.value = null
                 com.perol.asdpl.pixivez.objects.CrashHandler.instance

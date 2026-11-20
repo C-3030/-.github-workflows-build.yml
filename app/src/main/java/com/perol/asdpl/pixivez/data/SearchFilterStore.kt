@@ -51,9 +51,10 @@ object SearchFilterStore {
         return (listOf(word.trim()) + includes).filter { it.isNotBlank() }.joinToString(" ")
     }
 
-    /** 长标签常用 "/" "、" "+" 拼接多个子标签;vis() 还会带 "|" 分隔的译名,一起拆 */
+    /** 长标签常用 "/" "、" "#" "|" 拼接多个子标签(如"臭脚#气味#百合#堕落"),
+     *  一起拆开;vis() 还会带 "|" 分隔的译名 */
     fun tagParts(tagName: String): List<String> =
-        tagName.split('/', '／', '、', '，', ',', '|', '｜', '+', '＋', '&', '＆')
+        tagName.split('/', '／', '、', '，', ',', '|', '｜', '+', '＋', '&', '＆', '#', '＃')
             .map { it.trim() }
             .filter { it.isNotEmpty() }
 
@@ -63,9 +64,12 @@ object SearchFilterStore {
         val parts = tagParts(tagName)
         // 先逐字比对(name / translated_name / 拆出来的子标签都算)
         if (parts.any { it.equals(wanted, true) }) return true
-        return TagAliases.expand(wanted).any { alias ->
-            parts.any { part -> part.equals(alias, true) }
+        if (TagAliases.expand(wanted).any { alias -> parts.any { part -> part.equals(alias, true) } }) {
+            return true
         }
+        // 长标签经常把好几个标签直接连写(如"百炼成神气味气味系女尊"),
+        // 分隔符拆不干净,2 个字以上的词再补一次"包含"判断
+        return wanted.length >= 2 && parts.any { it.contains(wanted, true) }
     }
 
     /** 某个作品标签是否被"排除标签"命中(整组别名 + / 拆分子标签都算) */
