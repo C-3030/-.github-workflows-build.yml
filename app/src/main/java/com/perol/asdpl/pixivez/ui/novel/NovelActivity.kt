@@ -421,7 +421,17 @@ private class NovelReaderAdapter(
         val n = novel ?: return
         Glide.with(b.novelCover).load(n.image_urls.large.ifBlank { n.image_urls.medium })
             .transition(withCrossFade()).into(b.novelCover)
-        b.novelCover.setOnClickListener { openCover(n) }
+        // 这个 bindHeader 在适配器里,直接用 context 打开大图,不依赖 Activity 的私有方法
+        b.novelCover.setOnClickListener {
+            val url = n.image_urls.large.ifBlank { n.image_urls.medium }
+            if (url.isNotBlank()) {
+                b.root.context.startActivity(
+                    Intent(b.root.context, WebViewActivity::class.java)
+                        .setAction("browser.start")
+                        .putExtra("url", url)
+                )
+            }
+        }
         b.novelTitle.text = n.title
         b.novelAuthor.text = n.user.name
         b.novelAuthor.setOnClickListener {
