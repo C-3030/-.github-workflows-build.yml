@@ -203,9 +203,19 @@ class UserListAdapter(layoutResId: Int) :
             else -> {
                 illustRv.visibility = View.GONE
                 novelRv.visibility = View.GONE
-                // 没有作品:横条高度清零,卡片自然高度(头像 + 名字)
+                // 没有作品:卡片和内容都压到 86dp,只留头像 + 名字
                 collapseStrip(illustRv)
                 collapseStrip(novelRv)
+                val density = holder.itemView.resources.displayMetrics.density
+                val compact = (86 * density).toInt()
+                holder.getViewOrNull<MaterialCardView>(R.id.cardview)?.let { card ->
+                    card.layoutParams = card.layoutParams.apply { height = compact }
+                    (card.getChildAt(0))?.let { inner ->
+                        inner.layoutParams = inner.layoutParams.apply { height = compact }
+                    }
+                }
+                holder.getViewOrNull<TextView>(R.id.textview_usershowname)?.visibility =
+                    View.VISIBLE
                 return
             }
         }
