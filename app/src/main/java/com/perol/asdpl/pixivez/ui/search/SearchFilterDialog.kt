@@ -110,6 +110,17 @@ class SearchFilterDialog : DialogFragment() {
     private fun commit() {
         SearchFilterStore.save(include, exclude)
         FlowEventBus.post(Event.SearchFilterChanged)
+        // 回显一遍真正生效的条件:之前很多人以为设了,其实没保存上
+        com.perol.asdpl.pixivez.objects.Toasty.normal(
+            requireContext(),
+            "筛选已保存  包含:" + include.joinToString(",").ifBlank { "无" } +
+                "  排除:" + exclude.joinToString(",").ifBlank { "无" }
+        )
+    }
+
+    /** 增删标签立刻落盘,不依赖"确定";避免关掉对话框后改动丢失 */
+    private fun persist() {
+        SearchFilterStore.save(include, exclude)
     }
 
     /** 输入框:300ms 防抖查联想词,回车或点选即添加 */
@@ -176,6 +187,7 @@ class SearchFilterDialog : DialogFragment() {
         if (name.isEmpty() || target.any { it.equals(name, true) }) return
         target.add(name)
         renderChips(target, chips)
+        persist()
     }
 
     private fun renderChips(target: MutableList<String>, chips: ChipGroup) {
@@ -187,6 +199,7 @@ class SearchFilterDialog : DialogFragment() {
                 setOnCloseIconClickListener {
                     target.remove(word)
                     renderChips(target, chips)
+                    persist()
                 }
             }
             chips.addView(chip)
