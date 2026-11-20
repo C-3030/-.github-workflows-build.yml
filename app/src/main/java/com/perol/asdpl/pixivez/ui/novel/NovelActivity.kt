@@ -43,6 +43,7 @@ import com.perol.asdpl.pixivez.databinding.ViewNovelImageBinding
 import com.perol.asdpl.pixivez.objects.CrashHandler
 import com.perol.asdpl.pixivez.objects.Toasty
 import com.perol.asdpl.pixivez.services.PxEZApp
+import com.perol.asdpl.pixivez.ui.WebViewActivity
 import com.perol.asdpl.pixivez.ui.pic.PictureActivity
 import com.perol.asdpl.pixivez.ui.user.UserMActivity
 import kotlinx.coroutines.CoroutineScope
@@ -207,10 +208,22 @@ class NovelActivity : RinkActivity() {
             }
             R.id.action_novel_download -> exportNovel()
             R.id.action_novel_copy_id -> copyNovelId()
+            R.id.action_novel_view_cover -> viewModel.novel.value?.let { openCover(it) }
             R.id.action_novel_share -> share()
             else -> return super.onOptionsItemSelected(item)
         }
         return true
+    }
+
+    // 点封面 / 菜单"查看封面":用内置浏览器看大图(可双指缩放)
+    private fun openCover(novel: Novel) {
+        val url = novel.image_urls.large.ifBlank { novel.image_urls.medium }
+        if (url.isBlank()) return
+        startActivity(
+            Intent(this, WebViewActivity::class.java)
+                .setAction("browser.start")
+                .putExtra("url", url)
+        )
     }
 
     // 复制作品 id(方便去搜索框直接按 id 打开)
@@ -295,7 +308,7 @@ class NovelActivity : RinkActivity() {
                         isUser = false,
                         isNovel = true,
                         author = novel.user.name,
-                        meta = "${novel.text_length} · ♥ ${novel.total_bookmarks}"
+                        meta = "${novel.create_date.take(10)} · ${novel.text_length} · ♥ ${novel.total_bookmarks}"
                     )
                 )
             }
@@ -406,14 +419,16 @@ private class NovelReaderAdapter(
     @SuppressLint("SetTextI18n")
     private fun bindHeader(b: ViewNovelHeaderBinding) {
         val n = novel ?: return
-        Glide.with(b.novelCover).load(n.image_urls.medium)
+        Glide.with(b.novelCover).load(n.image_urls.large.ifBlank { n.image_urls.medium })
             .transition(withCrossFade()).into(b.novelCover)
+        b.novelCover.setOnClickListener { openCover(n) }
         b.novelTitle.text = n.title
         b.novelAuthor.text = n.user.name
         b.novelAuthor.setOnClickListener {
             UserMActivity.start(b.root.context, n.user.id)
         }
-        b.novelMeta.text = "${n.text_length} · ♥ ${n.total_bookmarks}"
+        b.novelMeta.text =
+            "${n.create_date.take(10)} · ${n.text_length} · ♥ ${n.total_bookmarks}"
         b.novelSeries.visibility = if (n.series != null) View.VISIBLE else View.GONE
         b.novelSeries.text = n.series?.title
         b.novelCaption.visibility = if (n.caption.isBlank()) View.GONE else View.VISIBLE

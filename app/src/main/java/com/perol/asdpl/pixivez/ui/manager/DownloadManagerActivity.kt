@@ -235,7 +235,8 @@ class DownloadManagerActivity : RinkActivity() {
                         isNovel = true,
                         file = file,
                         coverUrl = item.thumb.ifBlank { localCover(file) },
-                        novelId = item.id
+                        novelId = item.id.takeIf { it != 0 }
+                            ?: file.nameWithoutExtension.substringAfterLast('_').toIntOrNull()
                     )
                 )
             }
@@ -307,7 +308,9 @@ class DownloadManagerActivity : RinkActivity() {
                 try {
                     val novel = com.perol.asdpl.pixivez.data.RetrofitRepository.getInstance()
                         .api.getNovelDetail(id).novel
-                    NovelDownloadStore.setThumb(entry.file?.absolutePath.orEmpty(), novel.image_urls.medium)
+                    val thumb = novel.image_urls.medium.ifBlank { novel.image_urls.large }
+                    entry.file?.let { saveCoverNear(it, thumb) }
+                    NovelDownloadStore.setThumb(entry.file?.absolutePath.orEmpty(), thumb)
                     withContext(Dispatchers.Main) { render() }
                 } catch (e: Exception) {
                     // 拉不到就保持占位图
@@ -331,6 +334,25 @@ class DownloadManagerActivity : RinkActivity() {
         bytes >= 1024 * 1024 -> String.format(java.util.Locale.ROOT, "%.1fMB", bytes / 1048576f)
         bytes >= 1024 -> String.format(java.util.Locale.ROOT, "%.0fKB", bytes / 1024f)
         else -> "${bytes}B"
+    }
+
+    /** 把网络封面缓存成本地 <文件名>_cover.jpg,以后离线也能显示 */
+    private fun saveCoverNear(file: java.io.File, url: String) {
+        if (url.isBlank()) return
+        val target = java.io.File(file.parentFile, file.nameWithoutExtension + "_cover.jpg")
+        if (target.exists()) return
+        try {
+            val client = com.perol.asdpl.pixivez.networks.RestClient.downloadHttpClient
+            val request = okhttp3.Request.Builder()
+                .url(url)
+                .header("Referer", "https://www.pixiv.net/")
+                .build()
+            client.newCall(request).execute().use { resp ->
+                if (resp.isSuccessful) resp.body?.bytes()?.let { target.writeBytes(it) }
+            }
+        } catch (e: Exception) {
+            // 拿不到就算了
+        }
     }
 
     /** 导出时一起存下来的 <文件名>_cover.jpg */

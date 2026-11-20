@@ -467,4 +467,5 @@
     <string name="download_selected">下载所选</string>
     <string name="download_bookmark">收藏</string>
     <string name="copy_novel_id">复制作品id</string>
+    <string name="view_cover">查看封面</string>
 </resources>

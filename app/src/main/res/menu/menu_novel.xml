@@ -39,6 +39,10 @@
         app:iconTint="?android:colorControlNormal"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/action_novel_view_cover"
+        android:title="@string/view_cover"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_novel_copy_id"
         android:title="@string/copy_novel_id"
         app:showAsAction="never" />

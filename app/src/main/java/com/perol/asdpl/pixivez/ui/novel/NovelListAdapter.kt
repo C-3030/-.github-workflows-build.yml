@@ -27,7 +27,7 @@ class NovelListAdapter(layoutResId: Int) :
         holder.getView<TextView>(R.id.novel_title).text = item.title
         holder.getView<TextView>(R.id.novel_author).text = item.user.name
         holder.getView<TextView>(R.id.novel_meta).text =
-            "${item.text_length} · ♥ ${item.total_bookmarks}"
+            "${item.create_date.take(10)} · ${item.text_length} · ♥ ${item.total_bookmarks}"
         val cover = holder.getView<ImageView>(R.id.novel_cover)
         Glide.with(cover).load(item.image_urls.medium)
             .transition(withCrossFade()).into(cover)
